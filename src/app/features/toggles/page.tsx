@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
-import DashboardLayout from '@/components/layout/DashboardLayout';
+// Removed DashboardLayout import
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -195,7 +195,7 @@ export default function FeatureTogglesPage() {
 
   if (!hasRole('master')) {
     return (
-      <DashboardLayout>
+      <div className="min-h-screen bg-[#f6f6f6] p-6">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
@@ -203,12 +203,12 @@ export default function FeatureTogglesPage() {
             <p className="text-muted-foreground">Only master users can manage features.</p>
           </div>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
+    <div className="min-h-screen bg-[#f6f6f6] p-6">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -419,6 +419,6 @@ export default function FeatureTogglesPage() {
           })}
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }

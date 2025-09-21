@@ -3,28 +3,20 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import ProfileDropdown from '@/components/ui/ProfileDropdown';
 import {
   Building2,
   Users,
-  DollarSign,
-  TrendingUp,
-  Activity,
-  Target,
-  Zap,
-  Brain,
-  Database,
-  Trophy,
-  ShoppingCart,
+  Coffee,
+  UserPlus,
   BarChart3,
-  Plus,
+  UserCheck,
+  Target,
   ArrowRight,
-  CheckCircle,
-  AlertCircle,
-  Clock
+  TrendingUp,
+  DollarSign,
+  CheckCircle
 } from 'lucide-react';
 
 export default function Home() {
@@ -39,7 +31,7 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-muted flex items-center justify-center">
+      <div className="min-h-screen bg-[#f6f6f6] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="mt-2 text-muted-foreground">Loading...</p>
@@ -52,290 +44,210 @@ export default function Home() {
     return null;
   }
 
-  // Mock data for the dashboard
-  const stats = [
+  // Dashboard cards data with enhanced functionality
+  const dashboardCards = [
     {
-      title: 'Total Businesses',
-      value: '1,247',
-      change: '+12%',
-      changeType: 'increase' as const,
+      title: 'Business onboarding',
+      description: 'Manage new business registrations',
       icon: Building2,
-      color: 'text-primary'
+      href: '/businesses/onboarding',
+      stats: { total: 1247, pending: 23, completed: 1224 },
+      trend: '+12%',
+      trendType: 'increase' as const,
+      color: 'bg-blue-50',
+      iconColor: 'text-blue-600'
     },
     {
-      title: 'Active Subscriptions',
-      value: '1,156',
-      change: '+8%',
-      changeType: 'increase' as const,
-      icon: CheckCircle,
-      color: 'text-success'
+      title: 'Business overview',
+      description: 'View all business analytics',
+      icon: BarChart3,
+      href: '/businesses',
+      stats: { total: 1247, active: 1156, revenue: '$89,432' },
+      trend: '+8%',
+      trendType: 'increase' as const,
+      color: 'bg-green-50',
+      iconColor: 'text-green-600'
     },
     {
-      title: 'Monthly Revenue',
-      value: '$89,432',
-      change: '+15%',
-      changeType: 'increase' as const,
-      icon: DollarSign,
-      color: 'text-accent'
+      title: 'Team onboarding',
+      description: 'Add and manage team members',
+      icon: UserPlus,
+      href: '/team/onboarding',
+      stats: { total: 24, pending: 3, completed: 21 },
+      trend: '+2',
+      trendType: 'increase' as const,
+      color: 'bg-purple-50',
+      iconColor: 'text-purple-600'
     },
     {
-      title: 'Team Members',
-      value: '24',
-      change: '+2',
-      changeType: 'increase' as const,
-      icon: Users,
-      color: 'text-info'
+      title: 'Team overview',
+      description: 'Monitor team performance',
+      icon: UserCheck,
+      href: '/team',
+      stats: { total: 24, active: 22, performance: '92%' },
+      trend: '+5%',
+      trendType: 'increase' as const,
+      color: 'bg-orange-50',
+      iconColor: 'text-orange-600'
     }
   ];
 
-  const recentBusinesses = [
-    { id: 1, name: 'TechCorp Solutions', industry: 'Technology', status: 'active', onboardedAt: '2024-01-15', revenue: '$12,500' },
-    { id: 2, name: 'RetailMax Inc', industry: 'Retail', status: 'pending', onboardedAt: '2024-01-14', revenue: '$8,200' },
-    { id: 3, name: 'HealthCare Plus', industry: 'Healthcare', status: 'active', onboardedAt: '2024-01-13', revenue: '$15,300' },
-    { id: 4, name: 'FinanceFlow Ltd', industry: 'Finance', status: 'trial', onboardedAt: '2024-01-12', revenue: '$5,800' },
-  ];
-
-  const teamPerformance = [
-    { name: 'Sarah Johnson', role: 'Manager', businesses: 45, revenue: '$125,000', target: 50 },
-    { name: 'Mike Chen', role: 'Team', businesses: 32, revenue: '$89,500', target: 40 },
-    { name: 'Emily Davis', role: 'Team', businesses: 28, revenue: '$76,200', target: 35 },
-  ];
-
-  const businessFeatures = [
-    { name: 'Dashboard Analytics', enabled: true, usage: '98%' },
-    { name: 'Campaign Management', enabled: true, usage: '87%' },
-    { name: 'Data Center', enabled: true, usage: '92%' },
-    { name: 'Tribly AI', enabled: false, usage: '0%' },
-    { name: 'Automation', enabled: true, usage: '78%' },
-    { name: 'Cohorts', enabled: true, usage: '65%' },
-  ];
-
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      active: 'success',
-      pending: 'warning',
-      trial: 'info',
-      inactive: 'destructive'
-    } as const;
-
-    return (
-      <Badge variant={variants[status as keyof typeof variants] || 'outline'}>
-        {status}
-      </Badge>
-    );
+  const handleCardClick = (href: string) => {
+    router.push(href);
   };
 
+
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* Welcome Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Building2 className="h-6 w-6 text-primary" />
-              <span>Welcome back, {user?.name}!</span>
-            </CardTitle>
-            <CardDescription>
-              Here's what's happening with your Tribly business platform today.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
-            <Card key={index}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className={`text-sm ${stat.changeType === 'increase' ? 'text-success' : 'text-destructive'}`}>
-                      {stat.change} from last month
-                    </p>
-                  </div>
-                  <stat.icon className={`h-8 w-8 ${stat.color}`} />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Recent Businesses */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Recent Businesses</span>
-                <Button variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Business
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentBusinesses.map((business) => (
-                  <div key={business.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Building2 className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{business.name}</p>
-                        <p className="text-sm text-muted-foreground">{business.industry}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <p className="font-medium">{business.revenue}</p>
-                        <p className="text-sm text-muted-foreground">{business.onboardedAt}</p>
-                      </div>
-                      {getStatusBadge(business.status)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Team Performance */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Team Performance</CardTitle>
-              <CardDescription>Top performers this month</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {teamPerformance.map((member, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{member.name}</p>
-                        <p className="text-sm text-muted-foreground">{member.role}</p>
-                      </div>
-                      <Badge variant="outline">{member.businesses} businesses</Badge>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>Progress</span>
-                        <span>{Math.round((member.businesses / member.target) * 100)}%</span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div
-                          className="bg-primary h-2 rounded-full"
-                          style={{ width: `${Math.min((member.businesses / member.target) * 100, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground">Revenue: {member.revenue}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Feature Usage & Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Feature Usage */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Feature Usage</CardTitle>
-              <CardDescription>Most used business features</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {businessFeatures.map((feature, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-2 h-2 rounded-full ${feature.enabled ? 'bg-success' : 'bg-muted-foreground'}`} />
-                      <span className="font-medium">{feature.name}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-20 bg-muted rounded-full h-2">
-                        <div
-                          className="bg-primary h-2 rounded-full"
-                          style={{ width: feature.usage }}
-                        />
-                      </div>
-                      <span className="text-sm text-muted-foreground w-12">{feature.usage}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Common administrative tasks</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3">
-                <Button variant="outline" className="h-20 flex-col space-y-2">
-                  <Building2 className="h-5 w-5" />
-                  <span className="text-sm">Onboard Business</span>
-                </Button>
-                <Button variant="outline" className="h-20 flex-col space-y-2">
-                  <Users className="h-5 w-5" />
-                  <span className="text-sm">Add Team Member</span>
-                </Button>
-                <Button variant="outline" className="h-20 flex-col space-y-2">
-                  <Zap className="h-5 w-5" />
-                  <span className="text-sm">Manage Features</span>
-                </Button>
-                <Button variant="outline" className="h-20 flex-col space-y-2">
-                  <BarChart3 className="h-5 w-5" />
-                  <span className="text-sm">View Analytics</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* System Status */}
-        <Card>
-          <CardHeader>
-            <CardTitle>System Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-5 w-5 text-success" />
-                <div>
-                  <p className="font-medium">API Services</p>
-                  <p className="text-sm text-muted-foreground">All systems operational</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-5 w-5 text-success" />
-                <div>
-                  <p className="font-medium">Database</p>
-                  <p className="text-sm text-muted-foreground">Connected</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <AlertCircle className="h-5 w-5 text-warning" />
-                <div>
-                  <p className="font-medium">Email Service</p>
-                  <p className="text-sm text-muted-foreground">Minor delays</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-5 w-5 text-success" />
-                <div>
-                  <p className="font-medium">Payment Gateway</p>
-                  <p className="text-sm text-muted-foreground">Processing normally</p>
-                </div>
+    <div className="min-h-screen bg-[#f6f6f6] relative">
+      {/* Header Section */}
+      <div className="absolute top-[80px] left-[calc(16.667%+28px)] w-[1020px] h-[100px]">
+        <Card className="h-full">
+          <CardContent className="flex items-center justify-between p-6 h-full">
+            {/* Left side - Greeting */}
+            <div className="flex items-center gap-2">
+              <Coffee className="h-8 w-8 text-[#2a2a2f]" />
+              <div className="flex flex-col gap-1">
+                <h1 className="text-[20px] font-bold text-[#2a2a2f] leading-[1.4]">
+                  Good Morning, {user?.name || 'Aditya'}!
+                </h1>
+                <p className="text-[14px] font-normal text-[#626266] leading-[1.4]">
+                  Here's What's happening with your tribly business platform today
+                </p>
               </div>
             </div>
+
+            {/* Right side - User Profile */}
+            <ProfileDropdown />
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
+
+      {/* Main Cards Grid */}
+      <div className="absolute top-[214.5px] left-[calc(25%-10px)] w-[844px] h-[464px]">
+        <div className="grid grid-cols-2 gap-4 h-full">
+          {/* First Row */}
+          <div className="flex gap-4">
+            {/* Business onboarding */}
+            <Card 
+              className="flex-1 h-[224px] cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
+              onClick={() => handleCardClick(dashboardCards[0].href)}
+            >
+              <CardContent className="flex flex-col items-center justify-center gap-6 p-6 h-full relative">
+                <div className={`w-16 h-16 ${dashboardCards[0].color} rounded-full flex items-center justify-center`}>
+                  <Building2 className={`h-8 w-8 ${dashboardCards[0].iconColor}`} />
+                </div>
+                <div className="flex flex-col gap-1 items-center text-center">
+                  <h2 className="text-[20px] font-bold text-[#2a2a2f] leading-[1.4]">
+                    {dashboardCards[0].title}
+                  </h2>
+                  <p className="text-[14px] font-normal text-[#626266] leading-[1.4]">
+                    {dashboardCards[0].description}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[12px] text-[#626266]">
+                      {dashboardCards[0].stats.pending} pending
+                    </span>
+                    <span className="text-[12px] text-green-600 font-medium">
+                      {dashboardCards[0].trend}
+                    </span>
+                  </div>
+                </div>
+                <ArrowRight className="absolute top-4 right-4 h-4 w-4 text-[#626266]" />
+              </CardContent>
+            </Card>
+
+            {/* Business overview */}
+            <Card 
+              className="flex-1 h-[224px] cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
+              onClick={() => handleCardClick(dashboardCards[1].href)}
+            >
+              <CardContent className="flex flex-col items-center justify-center gap-6 p-6 h-full relative">
+                <div className={`w-16 h-16 ${dashboardCards[1].color} rounded-full flex items-center justify-center`}>
+                  <BarChart3 className={`h-8 w-8 ${dashboardCards[1].iconColor}`} />
+                </div>
+                <div className="flex flex-col gap-1 items-center text-center">
+                  <h2 className="text-[20px] font-bold text-[#2a2a2f] leading-[1.4]">
+                    {dashboardCards[1].title}
+                  </h2>
+                  <p className="text-[14px] font-normal text-[#626266] leading-[1.4]">
+                    {dashboardCards[1].description}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[12px] text-[#626266]">
+                      {dashboardCards[1].stats.revenue} revenue
+                    </span>
+                    <span className="text-[12px] text-green-600 font-medium">
+                      {dashboardCards[1].trend}
+                    </span>
+                  </div>
+                </div>
+                <ArrowRight className="absolute top-4 right-4 h-4 w-4 text-[#626266]" />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Second Row */}
+          <div className="flex gap-4">
+            {/* Team onboarding */}
+            <Card 
+              className="flex-1 h-[224px] cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
+              onClick={() => handleCardClick(dashboardCards[2].href)}
+            >
+              <CardContent className="flex flex-col items-center justify-center gap-6 p-6 h-full relative">
+                <div className={`w-16 h-16 ${dashboardCards[2].color} rounded-full flex items-center justify-center`}>
+                  <UserPlus className={`h-8 w-8 ${dashboardCards[2].iconColor}`} />
+                </div>
+                <div className="flex flex-col gap-1 items-center text-center">
+                  <h2 className="text-[20px] font-bold text-[#2a2a2f] leading-[1.4]">
+                    {dashboardCards[2].title}
+                  </h2>
+                  <p className="text-[14px] font-normal text-[#626266] leading-[1.4]">
+                    {dashboardCards[2].description}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[12px] text-[#626266]">
+                      {dashboardCards[2].stats.pending} pending
+                    </span>
+                    <span className="text-[12px] text-green-600 font-medium">
+                      {dashboardCards[2].trend}
+                    </span>
+                  </div>
+                </div>
+                <ArrowRight className="absolute top-4 right-4 h-4 w-4 text-[#626266]" />
+              </CardContent>
+            </Card>
+
+            {/* Team overview */}
+            <Card 
+              className="flex-1 h-[224px] cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
+              onClick={() => handleCardClick(dashboardCards[3].href)}
+            >
+              <CardContent className="flex flex-col items-center justify-center gap-6 p-6 h-full relative">
+                <div className={`w-16 h-16 ${dashboardCards[3].color} rounded-full flex items-center justify-center`}>
+                  <UserCheck className={`h-8 w-8 ${dashboardCards[3].iconColor}`} />
+                </div>
+                <div className="flex flex-col gap-1 items-center text-center">
+                  <h2 className="text-[20px] font-bold text-[#2a2a2f] leading-[1.4]">
+                    {dashboardCards[3].title}
+                  </h2>
+                  <p className="text-[14px] font-normal text-[#626266] leading-[1.4]">
+                    {dashboardCards[3].description}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[12px] text-[#626266]">
+                      {dashboardCards[3].stats.performance} performance
+                    </span>
+                    <span className="text-[12px] text-green-600 font-medium">
+                      {dashboardCards[3].trend}
+                    </span>
+                  </div>
+                </div>
+                <ArrowRight className="absolute top-4 right-4 h-4 w-4 text-[#626266]" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

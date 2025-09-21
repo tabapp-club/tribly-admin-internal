@@ -1,4 +1,4 @@
-import DashboardLayout from '@/components/layout/DashboardLayout';
+// Removed DashboardLayout import
 import DataTable from '@/components/ui/DataTable';
 
 export default function UsersPage() {
@@ -41,7 +41,7 @@ export default function UsersPage() {
   ];
 
   return (
-    <DashboardLayout>
+    <div className="min-h-screen bg-[#f6f6f6] p-6">
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
@@ -55,6 +55,6 @@ export default function UsersPage() {
           data={users}
         />
       </div>
-    </DashboardLayout>
+    </div>
   );
 }

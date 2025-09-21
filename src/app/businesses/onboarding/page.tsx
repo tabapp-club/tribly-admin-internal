@@ -1,14 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Building2,
   User,
@@ -24,11 +26,20 @@ import {
   Target,
   Calendar,
   Clock,
-  AlertCircle
+  AlertCircle,
+  FileText,
+  CreditCard,
+  UserCheck,
+  ChevronDown,
+  Briefcase,
+  Home,
+  FileCheck,
+  Settings,
+  Contact
 } from 'lucide-react';
 
-interface OnboardingStep {
-  id: number;
+interface TabItem {
+  id: string;
   title: string;
   description: string;
   icon: React.ComponentType<any>;
@@ -36,72 +47,110 @@ interface OnboardingStep {
 }
 
 export default function BusinessOnboardingPage() {
+  const router = useRouter();
   const { hasRole } = useAuth();
   const { addNotification } = useNotifications();
-  const [currentStep, setCurrentStep] = useState(1);
+  const [activeTab, setActiveTab] = useState('basic-info');
   const [formData, setFormData] = useState({
-    // Business Information
+    // Basic Information
     businessName: '',
     industry: '',
+    businessType: '',
     businessSize: '',
     website: '',
+    description: '',
 
     // Contact Information
     contactPerson: '',
     contactEmail: '',
     contactPhone: '',
-    address: '',
+    alternateEmail: '',
+    alternatePhone: '',
 
-    // Subscription Details
-    subscriptionPlan: '',
-    billingCycle: 'monthly',
+    // Business Address
+    streetAddress: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: '',
+    timezone: '',
 
-    // Team Assignment
-    assignedTo: '',
-    notes: ''
+    // Business Registration
+    registrationNumber: '',
+    taxId: '',
+    businessLicense: '',
+    incorporationDate: '',
+    legalStructure: '',
+
+    // POS/Accounting Details
+    posSystem: '',
+    accountingSoftware: '',
+    paymentProcessor: '',
+    bankName: '',
+    accountNumber: '',
+    routingNumber: '',
+
+    // Primary POC Details
+    pocName: '',
+    pocTitle: '',
+    pocEmail: '',
+    pocPhone: '',
+    pocDepartment: '',
+    pocNotes: ''
   });
 
-  const steps: OnboardingStep[] = [
+  const tabs: TabItem[] = [
     {
-      id: 1,
-      title: 'Business Information',
-      description: 'Basic business details and industry',
-      icon: Building2,
-      completed: currentStep > 1
+      id: 'basic-info',
+      title: 'Basic information',
+      description: 'Company name, industry, and type',
+      icon: Briefcase,
+      completed: !!(formData.businessName && formData.industry && formData.businessType)
     },
     {
-      id: 2,
-      title: 'Contact Details',
-      description: 'Primary contact information',
-      icon: User,
-      completed: currentStep > 2
+      id: 'contact-info',
+      title: 'Contact information',
+      description: 'Primary and alternate contacts',
+      icon: Contact,
+      completed: !!(formData.contactPerson && formData.contactEmail && formData.contactPhone)
     },
     {
-      id: 3,
-      title: 'Subscription Plan',
-      description: 'Choose subscription and billing',
-      icon: DollarSign,
-      completed: currentStep > 3
+      id: 'business-address',
+      title: 'Business address',
+      description: 'Physical location and timezone',
+      icon: Home,
+      completed: !!(formData.streetAddress && formData.city && formData.state && formData.zipCode)
     },
     {
-      id: 4,
-      title: 'Team Assignment',
-      description: 'Assign to team member',
-      icon: Users,
-      completed: currentStep > 4
+      id: 'business-registration',
+      title: 'Business registration',
+      description: 'Legal documents and tax info',
+      icon: FileCheck,
+      completed: !!(formData.registrationNumber && formData.taxId && formData.legalStructure)
     },
     {
-      id: 5,
-      title: 'Review & Create',
-      description: 'Review and create business account',
-      icon: CheckCircle,
-      completed: false
+      id: 'pos-accounting',
+      title: 'POS/accounting details',
+      description: 'Payment and accounting systems',
+      icon: Settings,
+      completed: !!(formData.posSystem && formData.accountingSoftware && formData.paymentProcessor)
+    },
+    {
+      id: 'primary-poc',
+      title: 'Primary POC details',
+      description: 'Main point of contact info',
+      icon: UserCheck,
+      completed: !!(formData.pocName && formData.pocEmail && formData.pocPhone)
     }
   ];
 
   const industries = [
     'Technology', 'Retail', 'Healthcare', 'Finance', 'Education',
     'Manufacturing', 'Real Estate', 'Consulting', 'E-commerce', 'Other'
+  ];
+
+  const businessTypes = [
+    'Corporation', 'LLC', 'Partnership', 'Sole Proprietorship', 'Non-profit'
   ];
 
   const businessSizes = [
@@ -111,33 +160,31 @@ export default function BusinessOnboardingPage() {
     'Enterprise (200+ employees)'
   ];
 
-  const subscriptionPlans = [
-    { id: 'basic', name: 'Basic', price: '$29', features: ['Analytics', 'Basic Campaigns'] },
-    { id: 'professional', name: 'Professional', price: '$79', features: ['Analytics', 'Campaigns', 'Automation'] },
-    { id: 'enterprise', name: 'Enterprise', price: '$199', features: ['All Features', 'AI', 'Priority Support'] }
+  const legalStructures = [
+    'Corporation', 'LLC', 'Partnership', 'Sole Proprietorship', 'Non-profit', 'Other'
   ];
 
-  const teamMembers = [
-    { id: '1', name: 'Sarah Johnson', role: 'Manager', available: true },
-    { id: '2', name: 'Mike Chen', role: 'Team', available: true },
-    { id: '3', name: 'Emily Davis', role: 'Team', available: false },
-    { id: '4', name: 'David Wilson', role: 'Team', available: true }
+  const posSystems = [
+    'Square', 'Shopify POS', 'Clover', 'Toast', 'Lightspeed', 'Revel', 'Other'
+  ];
+
+  const accountingSoftware = [
+    'QuickBooks', 'Xero', 'FreshBooks', 'Wave', 'Sage', 'Other'
+  ];
+
+  const paymentProcessors = [
+    'Stripe', 'PayPal', 'Square', 'Authorize.Net', 'Braintree', 'Other'
+  ];
+
+  const timezones = [
+    'UTC-12:00', 'UTC-11:00', 'UTC-10:00', 'UTC-09:00', 'UTC-08:00', 'UTC-07:00',
+    'UTC-06:00', 'UTC-05:00', 'UTC-04:00', 'UTC-03:00', 'UTC-02:00', 'UTC-01:00',
+    'UTC+00:00', 'UTC+01:00', 'UTC+02:00', 'UTC+03:00', 'UTC+04:00', 'UTC+05:00',
+    'UTC+06:00', 'UTC+07:00', 'UTC+08:00', 'UTC+09:00', 'UTC+10:00', 'UTC+11:00', 'UTC+12:00'
   ];
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleNext = () => {
-    if (currentStep < steps.length) {
-      setCurrentStep(prev => prev + 1);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(prev => prev - 1);
-    }
   };
 
   const handleSubmit = () => {
@@ -145,295 +192,509 @@ export default function BusinessOnboardingPage() {
     addNotification({
       title: 'Business Onboarded!',
       message: `${formData.businessName} has been successfully onboarded.`,
-      type: 'success'
+      type: 'success',
+      isRead: false
     });
 
     // Reset form
     setFormData({
       businessName: '',
       industry: '',
+      businessType: '',
       businessSize: '',
       website: '',
+      description: '',
       contactPerson: '',
       contactEmail: '',
       contactPhone: '',
-      address: '',
-      subscriptionPlan: '',
-      billingCycle: 'monthly',
-      assignedTo: '',
-      notes: ''
+      alternateEmail: '',
+      alternatePhone: '',
+      streetAddress: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: '',
+      timezone: '',
+      registrationNumber: '',
+      taxId: '',
+      businessLicense: '',
+      incorporationDate: '',
+      legalStructure: '',
+      posSystem: '',
+      accountingSoftware: '',
+      paymentProcessor: '',
+      bankName: '',
+      accountNumber: '',
+      routingNumber: '',
+      pocName: '',
+      pocTitle: '',
+      pocEmail: '',
+      pocPhone: '',
+      pocDepartment: '',
+      pocNotes: ''
     });
-    setCurrentStep(1);
+    setActiveTab('basic-info');
   };
 
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 1:
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'basic-info':
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="businessName" className="mb-0.5">Business Name *</Label>
+                <Input
+                  id="businessName"
+                  value={formData.businessName}
+                  onChange={(e) => handleInputChange('businessName', e.target.value)}
+                  placeholder="Enter business name"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="industry" className="mb-0.5">Industry *</Label>
+                <Select value={formData.industry} onValueChange={(value) => handleInputChange('industry', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select industry" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {industries.map(industry => (
+                      <SelectItem key={industry} value={industry}>{industry}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="businessType" className="mb-0.5">Business Type *</Label>
+                <Select value={formData.businessType} onValueChange={(value) => handleInputChange('businessType', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select business type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {businessTypes.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="businessSize" className="mb-0.5">Business Size</Label>
+                <Select value={formData.businessSize} onValueChange={(value) => handleInputChange('businessSize', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select business size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {businessSizes.map(size => (
+                      <SelectItem key={size} value={size}>{size}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="website" className="mb-0.5">Website</Label>
+                <div className="relative">
+                  <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="website"
+                    value={formData.website}
+                    onChange={(e) => handleInputChange('website', e.target.value)}
+                    placeholder="https://example.com"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div>
-              <Label htmlFor="businessName">Business Name *</Label>
-              <Input
-                id="businessName"
-                value={formData.businessName}
-                onChange={(e) => handleInputChange('businessName', e.target.value)}
-                placeholder="Enter business name"
+              <Label htmlFor="description" className="mb-0.5">Business Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                placeholder="Brief description of your business..."
+                className="min-h-[100px]"
               />
             </div>
+          </div>
+        );
 
-            <div>
-              <Label htmlFor="industry">Industry *</Label>
-              <select
-                id="industry"
-                value={formData.industry}
-                onChange={(e) => handleInputChange('industry', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-md bg-background"
-              >
-                <option value="">Select industry</option>
-                {industries.map(industry => (
-                  <option key={industry} value={industry}>{industry}</option>
-                ))}
-              </select>
-            </div>
+      case 'contact-info':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="contactPerson" className="mb-0.5">Contact Person *</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="contactPerson"
+                    value={formData.contactPerson}
+                    onChange={(e) => handleInputChange('contactPerson', e.target.value)}
+                    placeholder="Full name"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
 
-            <div>
-              <Label htmlFor="businessSize">Business Size *</Label>
-              <select
-                id="businessSize"
-                value={formData.businessSize}
-                onChange={(e) => handleInputChange('businessSize', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-md bg-background"
-              >
-                <option value="">Select business size</option>
-                {businessSizes.map(size => (
-                  <option key={size} value={size}>{size}</option>
-                ))}
-              </select>
-            </div>
+              <div>
+                <Label htmlFor="contactEmail" className="mb-0.5">Primary Email *</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="contactEmail"
+                    type="email"
+                    value={formData.contactEmail}
+                    onChange={(e) => handleInputChange('contactEmail', e.target.value)}
+                    placeholder="contact@business.com"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
 
-            <div>
-              <Label htmlFor="website">Website</Label>
-              <div className="relative">
-                <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="website"
-                  value={formData.website}
-                  onChange={(e) => handleInputChange('website', e.target.value)}
-                  placeholder="https://example.com"
-                  className="pl-10"
-                />
+              <div>
+                <Label htmlFor="contactPhone" className="mb-0.5">Primary Phone *</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="contactPhone"
+                    value={formData.contactPhone}
+                    onChange={(e) => handleInputChange('contactPhone', e.target.value)}
+                    placeholder="+1 (555) 123-4567"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="alternateEmail" className="mb-0.5">Alternate Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="alternateEmail"
+                    type="email"
+                    value={formData.alternateEmail}
+                    onChange={(e) => handleInputChange('alternateEmail', e.target.value)}
+                    placeholder="alternate@business.com"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="alternatePhone" className="mb-0.5">Alternate Phone</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="alternatePhone"
+                    value={formData.alternatePhone}
+                    onChange={(e) => handleInputChange('alternatePhone', e.target.value)}
+                    placeholder="+1 (555) 987-6543"
+                    className="pl-10"
+                  />
+                </div>
               </div>
             </div>
           </div>
         );
 
-      case 2:
+      case 'business-address':
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <Label htmlFor="contactPerson">Contact Person *</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="contactPerson"
-                  value={formData.contactPerson}
-                  onChange={(e) => handleInputChange('contactPerson', e.target.value)}
-                  placeholder="Full name"
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="contactEmail">Email Address *</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="contactEmail"
-                  type="email"
-                  value={formData.contactEmail}
-                  onChange={(e) => handleInputChange('contactEmail', e.target.value)}
-                  placeholder="contact@business.com"
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="contactPhone">Phone Number</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="contactPhone"
-                  value={formData.contactPhone}
-                  onChange={(e) => handleInputChange('contactPhone', e.target.value)}
-                  placeholder="+1 (555) 123-4567"
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="address">Business Address</Label>
+              <Label htmlFor="streetAddress" className="mb-0.5">Street Address *</Label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  placeholder="123 Business St, City, State 12345"
+                  id="streetAddress"
+                  value={formData.streetAddress}
+                  onChange={(e) => handleInputChange('streetAddress', e.target.value)}
+                  placeholder="123 Business Street"
                   className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <Label htmlFor="city" className="mb-0.5">City *</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) => handleInputChange('city', e.target.value)}
+                  placeholder="City"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="state" className="mb-0.5">State/Province *</Label>
+                <Input
+                  id="state"
+                  value={formData.state}
+                  onChange={(e) => handleInputChange('state', e.target.value)}
+                  placeholder="State"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="zipCode" className="mb-0.5">ZIP/Postal Code *</Label>
+                <Input
+                  id="zipCode"
+                  value={formData.zipCode}
+                  onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                  placeholder="12345"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="country" className="mb-0.5">Country</Label>
+                <Input
+                  id="country"
+                  value={formData.country}
+                  onChange={(e) => handleInputChange('country', e.target.value)}
+                  placeholder="Country"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="timezone" className="mb-0.5">Timezone</Label>
+                <Select value={formData.timezone} onValueChange={(value) => handleInputChange('timezone', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timezones.map(timezone => (
+                      <SelectItem key={timezone} value={timezone}>{timezone}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'business-registration':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="registrationNumber" className="mb-0.5">Registration Number *</Label>
+                <Input
+                  id="registrationNumber"
+                  value={formData.registrationNumber}
+                  onChange={(e) => handleInputChange('registrationNumber', e.target.value)}
+                  placeholder="Business registration number"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="taxId" className="mb-0.5">Tax ID/EIN *</Label>
+                <Input
+                  id="taxId"
+                  value={formData.taxId}
+                  onChange={(e) => handleInputChange('taxId', e.target.value)}
+                  placeholder="Tax identification number"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="businessLicense" className="mb-0.5">Business License</Label>
+                <Input
+                  id="businessLicense"
+                  value={formData.businessLicense}
+                  onChange={(e) => handleInputChange('businessLicense', e.target.value)}
+                  placeholder="Business license number"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="incorporationDate" className="mb-0.5">Incorporation Date</Label>
+                <Input
+                  id="incorporationDate"
+                  type="date"
+                  value={formData.incorporationDate}
+                  onChange={(e) => handleInputChange('incorporationDate', e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="legalStructure" className="mb-0.5">Legal Structure *</Label>
+                <Select value={formData.legalStructure} onValueChange={(value) => handleInputChange('legalStructure', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select legal structure" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {legalStructures.map(structure => (
+                      <SelectItem key={structure} value={structure}>{structure}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'pos-accounting':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="posSystem" className="mb-0.5">POS System *</Label>
+                <Select value={formData.posSystem} onValueChange={(value) => handleInputChange('posSystem', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select POS system" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {posSystems.map(system => (
+                      <SelectItem key={system} value={system}>{system}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="accountingSoftware" className="mb-0.5">Accounting Software *</Label>
+                <Select value={formData.accountingSoftware} onValueChange={(value) => handleInputChange('accountingSoftware', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select accounting software" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accountingSoftware.map(software => (
+                      <SelectItem key={software} value={software}>{software}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="paymentProcessor" className="mb-0.5">Payment Processor *</Label>
+                <Select value={formData.paymentProcessor} onValueChange={(value) => handleInputChange('paymentProcessor', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select payment processor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paymentProcessors.map(processor => (
+                      <SelectItem key={processor} value={processor}>{processor}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="bankName" className="mb-0.5">Bank Name</Label>
+                <Input
+                  id="bankName"
+                  value={formData.bankName}
+                  onChange={(e) => handleInputChange('bankName', e.target.value)}
+                  placeholder="Bank name"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="accountNumber" className="mb-0.5">Account Number</Label>
+                <Input
+                  id="accountNumber"
+                  value={formData.accountNumber}
+                  onChange={(e) => handleInputChange('accountNumber', e.target.value)}
+                  placeholder="Account number"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="routingNumber" className="mb-0.5">Routing Number</Label>
+                <Input
+                  id="routingNumber"
+                  value={formData.routingNumber}
+                  onChange={(e) => handleInputChange('routingNumber', e.target.value)}
+                  placeholder="Routing number"
                 />
               </div>
             </div>
           </div>
         );
 
-      case 3:
+      case 'primary-poc':
         return (
           <div className="space-y-6">
-            <div>
-              <Label>Subscription Plan *</Label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                {subscriptionPlans.map(plan => (
-                  <Card
-                    key={plan.id}
-                    className={`cursor-pointer transition-colors ${
-                      formData.subscriptionPlan === plan.id
-                        ? 'ring-2 ring-primary border-primary'
-                        : 'hover:border-primary/50'
-                    }`}
-                    onClick={() => handleInputChange('subscriptionPlan', plan.id)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <h3 className="font-semibold">{plan.name}</h3>
-                        <p className="text-2xl font-bold text-primary">{plan.price}</p>
-                        <p className="text-sm text-muted-foreground">per month</p>
-                        <ul className="mt-4 space-y-2 text-sm">
-                          {plan.features.map(feature => (
-                            <li key={feature} className="flex items-center">
-                              <CheckCircle className="h-4 w-4 text-success mr-2" />
-                              {feature}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="pocName" className="mb-0.5">POC Name *</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="pocName"
+                    value={formData.pocName}
+                    onChange={(e) => handleInputChange('pocName', e.target.value)}
+                    placeholder="Full name"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="pocTitle" className="mb-0.5">Title/Position</Label>
+                <Input
+                  id="pocTitle"
+                  value={formData.pocTitle}
+                  onChange={(e) => handleInputChange('pocTitle', e.target.value)}
+                  placeholder="Job title"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="pocEmail" className="mb-0.5">Email *</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="pocEmail"
+                    type="email"
+                    value={formData.pocEmail}
+                    onChange={(e) => handleInputChange('pocEmail', e.target.value)}
+                    placeholder="poc@business.com"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="pocPhone" className="mb-0.5">Phone *</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="pocPhone"
+                    value={formData.pocPhone}
+                    onChange={(e) => handleInputChange('pocPhone', e.target.value)}
+                    placeholder="+1 (555) 123-4567"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="pocDepartment" className="mb-0.5">Department</Label>
+                <Input
+                  id="pocDepartment"
+                  value={formData.pocDepartment}
+                  onChange={(e) => handleInputChange('pocDepartment', e.target.value)}
+                  placeholder="Department"
+                />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="billingCycle">Billing Cycle</Label>
-              <select
-                id="billingCycle"
-                value={formData.billingCycle}
-                onChange={(e) => handleInputChange('billingCycle', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-md bg-background"
-              >
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly (20% discount)</option>
-              </select>
-            </div>
-          </div>
-        );
-
-      case 4:
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label>Assign to Team Member *</Label>
-              <div className="space-y-2 mt-2">
-                {teamMembers.map(member => (
-                  <div
-                    key={member.id}
-                    className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
-                      formData.assignedTo === member.id
-                        ? 'ring-2 ring-primary border-primary'
-                        : 'hover:border-primary/50'
-                    } ${!member.available ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    onClick={() => member.available && handleInputChange('assignedTo', member.id)}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{member.name}</p>
-                        <p className="text-sm text-muted-foreground">{member.role}</p>
-                      </div>
-                    </div>
-                    {!member.available && (
-                      <Badge variant="outline">Unavailable</Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="notes">Additional Notes</Label>
-              <textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                placeholder="Any special requirements or notes..."
-                className="w-full px-3 py-2 border border-border rounded-md bg-background min-h-[100px]"
+              <Label htmlFor="pocNotes" className="mb-0.5">Additional Notes</Label>
+              <Textarea
+                id="pocNotes"
+                value={formData.pocNotes}
+                onChange={(e) => handleInputChange('pocNotes', e.target.value)}
+                placeholder="Any additional notes about the primary point of contact..."
+                className="min-h-[100px]"
               />
-            </div>
-          </div>
-        );
-
-      case 5:
-        return (
-          <div className="space-y-6">
-            <div className="bg-muted p-4 rounded-lg">
-              <h3 className="font-semibold mb-4">Review Business Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="font-medium">Business Name:</p>
-                  <p className="text-muted-foreground">{formData.businessName}</p>
-                </div>
-                <div>
-                  <p className="font-medium">Industry:</p>
-                  <p className="text-muted-foreground">{formData.industry}</p>
-                </div>
-                <div>
-                  <p className="font-medium">Contact Person:</p>
-                  <p className="text-muted-foreground">{formData.contactPerson}</p>
-                </div>
-                <div>
-                  <p className="font-medium">Email:</p>
-                  <p className="text-muted-foreground">{formData.contactEmail}</p>
-                </div>
-                <div>
-                  <p className="font-medium">Subscription:</p>
-                  <p className="text-muted-foreground">
-                    {subscriptionPlans.find(p => p.id === formData.subscriptionPlan)?.name}
-                    ({formData.billingCycle})
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium">Assigned to:</p>
-                  <p className="text-muted-foreground">
-                    {teamMembers.find(m => m.id === formData.assignedTo)?.name}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-warning/10 border border-warning/20 p-4 rounded-lg">
-              <div className="flex items-start space-x-2">
-                <AlertCircle className="h-5 w-5 text-warning mt-0.5" />
-                <div>
-                  <p className="font-medium text-warning">Ready to Create Account</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    This will create a new business account and send onboarding emails to the contact person.
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
         );
@@ -445,110 +706,174 @@ export default function BusinessOnboardingPage() {
 
   if (!hasRole('manager')) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-            <h2 className="text-xl font-semibold">Access Denied</h2>
-            <p className="text-muted-foreground">You don't have permission to access this page.</p>
-          </div>
+      <div className="min-h-screen bg-[#f6f6f6] flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <h2 className="text-xl font-semibold">Access Denied</h2>
+          <p className="text-muted-foreground">You don't have permission to access this page.</p>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
+  const handleBack = () => {
+    router.back();
+  };
+
+  const handleTabBack = () => {
+    const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
+    if (currentIndex > 0) {
+      setActiveTab(tabs[currentIndex - 1].id);
+    }
+  };
+
+  const handleNext = () => {
+    const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
+    if (currentIndex < tabs.length - 1) {
+      setActiveTab(tabs[currentIndex + 1].id);
+    } else {
+      handleSubmit();
+    }
+  };
+
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Business Onboarding</h1>
-          <p className="text-muted-foreground">Onboard new businesses to the Tribly platform</p>
+    <div className="bg-[#f6f6f6] relative size-full min-h-screen p-4 lg:p-6 overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full">
+        {/* Header Section */}
+        <div className="flex gap-[7px] items-start mb-12">
+          <button 
+            onClick={handleBack}
+            className="overflow-clip relative shrink-0 size-[32px] hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
+            aria-label="Go back"
+          >
+            <div className="absolute flex h-[16px] items-center justify-center left-[2px] top-[8px] w-[28px]">
+              <div className="flex-none rotate-[180deg]">
+                <div className="h-[16px] relative w-[28px]">
+                  <div className="absolute flex inset-[6.82%_4.09%] items-center justify-center">
+                    <div className="flex-none h-[13.816px] rotate-[180deg] w-[25.709px]">
+                      <div className="relative size-full">
+                        <img alt="" className="block max-w-none size-full" src="http://localhost:3845/assets/e93f530dec15b9aeeb889e89d7a05b8c41519245.svg" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </button>
+          <div className="flex flex-col items-start leading-[0] relative shrink-0 text-black">
+            <div className="flex flex-col font-bold justify-center relative shrink-0 text-[24px]">
+              <p className="leading-[1.4]">Business onboarding</p>
+            </div>
+            <div className="flex flex-col font-light justify-center relative shrink-0 text-[14px]">
+              <p className="leading-[1.4]">Supporting text</p>
+            </div>
+          </div>
         </div>
 
-        {/* Progress Steps */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              {steps.map((step, index) => (
-                <div key={step.id} className="flex items-center">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                    step.completed
-                      ? 'bg-success border-success text-white'
-                      : currentStep === step.id
-                        ? 'bg-primary border-primary text-white'
-                        : 'border-muted-foreground text-muted-foreground'
-                  }`}>
-                    {step.completed ? (
-                      <CheckCircle className="h-5 w-5" />
-                    ) : (
-                      <step.icon className="h-5 w-5" />
-                    )}
-                  </div>
-
-                  <div className="ml-3">
-                    <p className={`font-medium ${
-                      currentStep >= step.id ? 'text-foreground' : 'text-muted-foreground'
+        {/* Main Content Area */}
+        <div className="flex flex-col lg:flex-row gap-8 lg:gap-[55px] items-start w-full relative">
+          {/* Left Sidebar - Tab Navigation */}
+          <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full lg:w-[320px] max-h-[60vh] lg:max-h-none overflow-y-auto lg:overflow-visible">
+            {tabs.map((tab) => (
+              <div
+                key={tab.id}
+                className={`bg-white relative rounded-[4px] shrink-0 w-full lg:w-[299px] cursor-pointer transition-all min-h-[76px] ${
+                  activeTab === tab.id ? 'ring-2 ring-blue-500 shadow-md' : 'hover:shadow-sm'
+                }`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <div className="box-border flex gap-[12px] items-center justify-between overflow-hidden p-[12px] relative w-full">
+                  <div className="flex gap-[12px] items-center flex-1 min-w-0">
+                    <div className={`relative shrink-0 size-[40px] rounded-full flex items-center justify-center ${
+                      tab.completed
+                        ? 'bg-green-100 text-green-600'
+                        : activeTab === tab.id
+                          ? 'bg-blue-100 text-blue-600'
+                          : 'bg-gray-100 text-gray-600'
                     }`}>
-                      {step.title}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{step.description}</p>
+                      {tab.completed ? (
+                        <CheckCircle className="h-5 w-5" />
+                      ) : (
+                        <tab.icon className="h-5 w-5" />
+                      )}
+                    </div>
+                    <div className="flex flex-col font-normal grow justify-center leading-[0] min-w-0 text-[#2a2a2f] text-[14px]">
+                      <p className="leading-[1.4] font-bold">{tab.title}</p>
+                      <p className="leading-[1.3] text-[12px] text-gray-500 mt-1 font-normal">{tab.description}</p>
+                    </div>
                   </div>
-
-                  {index < steps.length - 1 && (
-                    <ArrowRight className="h-4 w-4 text-muted-foreground mx-4" />
-                  )}
+                  <div className="flex items-center justify-center relative shrink-0 w-[22px] h-[22px]">
+                    <ChevronDown className="h-4 w-4 text-gray-400 rotate-[-90deg]" />
+                  </div>
                 </div>
-              ))}
+                <div aria-hidden="true" className="absolute border border-[#e9e9e9] border-solid inset-0 pointer-events-none rounded-[4px]" />
+              </div>
+            ))}
+          </div>
+
+          {/* Right Content Area */}
+          <div className="bg-white rounded-lg p-4 lg:p-8 flex-1 min-h-[381px] shadow-sm w-full lg:ml-0">
+            <div className="mb-6">
+              <div className="flex items-start gap-3 mb-0">
+                {(() => {
+                  const activeTabData = tabs.find(tab => tab.id === activeTab);
+                  return activeTabData ? (
+                    <>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center mt-1 ${
+                        activeTabData.completed
+                          ? 'bg-green-100 text-green-600'
+                          : 'bg-blue-100 text-blue-600'
+                      }`}>
+                        {activeTabData.completed ? (
+                          <CheckCircle className="h-5 w-5" />
+                        ) : (
+                          <activeTabData.icon className="h-5 w-5" />
+                        )}
+                      </div>
+                      <div className="flex flex-col">
+                        <h2 className="text-[20px] font-bold text-[#2a2a2f]">
+                          {activeTabData.title}
+                        </h2>
+                        <p className="text-gray-600 text-[14px] font-normal">
+                          {activeTabData.description}
+                        </p>
+                      </div>
+                    </>
+                  ) : null;
+                })()}
+              </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Step Content */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <steps[currentStep - 1].icon className="h-5 w-5" />
-              <span>Step {currentStep}: {steps[currentStep - 1].title}</span>
-            </CardTitle>
-            <CardDescription>{steps[currentStep - 1].description}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {renderStepContent()}
-          </CardContent>
-        </Card>
-
-        {/* Navigation */}
-        <div className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentStep === 1}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Previous</span>
-          </Button>
-
-          {currentStep < steps.length ? (
-            <Button
-              onClick={handleNext}
-              className="flex items-center space-x-2"
-            >
-              <span>Next</span>
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSubmit}
-              className="flex items-center space-x-2"
-            >
-              <CheckCircle className="h-4 w-4" />
-              <span>Create Business Account</span>
-            </Button>
-          )}
+            
+            {renderTabContent()}
+            
+            {/* Navigation Buttons */}
+            <div className="flex justify-between mt-8">
+              {/* Back Button - Only show from second tab onwards */}
+              {tabs.findIndex(tab => tab.id === activeTab) > 0 && (
+                <button
+                  onClick={handleTabBack}
+                  className="bg-gray-100 box-border flex gap-[8px] h-[48px] items-center justify-center px-[16px] py-[12px] rounded-[4px] w-[120px] hover:bg-gray-200 transition-colors border border-gray-300"
+                >
+                  <ArrowLeft className="h-4 w-4 text-gray-600" />
+                  <span className="text-gray-700 font-medium">Back</span>
+                </button>
+              )}
+              
+              {/* Next Button */}
+              <button
+                onClick={handleNext}
+                className="bg-[#6e4eff] box-border flex gap-[8px] h-[48px] items-center justify-center px-[16px] py-[12px] rounded-[4px] w-[218px] hover:bg-[#5a3fd9] transition-colors ml-auto"
+              >
+                <div className="flex flex-col font-semibold justify-center leading-[0] relative shrink-0 text-[16px] text-nowrap text-white">
+                  <p className="leading-[24px] whitespace-pre">
+                    {tabs.findIndex(tab => tab.id === activeTab) === tabs.length - 1 ? 'Create Account' : 'Next'}
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }
