@@ -1,103 +1,341 @@
-import Image from "next/image";
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Building2,
+  Users,
+  DollarSign,
+  TrendingUp,
+  Activity,
+  Target,
+  Zap,
+  Brain,
+  Database,
+  Trophy,
+  ShoppingCart,
+  BarChart3,
+  Plus,
+  ArrowRight,
+  CheckCircle,
+  AlertCircle,
+  Clock
+} from 'lucide-react';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-muted flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading...</p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Mock data for the dashboard
+  const stats = [
+    {
+      title: 'Total Businesses',
+      value: '1,247',
+      change: '+12%',
+      changeType: 'increase' as const,
+      icon: Building2,
+      color: 'text-primary'
+    },
+    {
+      title: 'Active Subscriptions',
+      value: '1,156',
+      change: '+8%',
+      changeType: 'increase' as const,
+      icon: CheckCircle,
+      color: 'text-success'
+    },
+    {
+      title: 'Monthly Revenue',
+      value: '$89,432',
+      change: '+15%',
+      changeType: 'increase' as const,
+      icon: DollarSign,
+      color: 'text-accent'
+    },
+    {
+      title: 'Team Members',
+      value: '24',
+      change: '+2',
+      changeType: 'increase' as const,
+      icon: Users,
+      color: 'text-info'
+    }
+  ];
+
+  const recentBusinesses = [
+    { id: 1, name: 'TechCorp Solutions', industry: 'Technology', status: 'active', onboardedAt: '2024-01-15', revenue: '$12,500' },
+    { id: 2, name: 'RetailMax Inc', industry: 'Retail', status: 'pending', onboardedAt: '2024-01-14', revenue: '$8,200' },
+    { id: 3, name: 'HealthCare Plus', industry: 'Healthcare', status: 'active', onboardedAt: '2024-01-13', revenue: '$15,300' },
+    { id: 4, name: 'FinanceFlow Ltd', industry: 'Finance', status: 'trial', onboardedAt: '2024-01-12', revenue: '$5,800' },
+  ];
+
+  const teamPerformance = [
+    { name: 'Sarah Johnson', role: 'Manager', businesses: 45, revenue: '$125,000', target: 50 },
+    { name: 'Mike Chen', role: 'Team', businesses: 32, revenue: '$89,500', target: 40 },
+    { name: 'Emily Davis', role: 'Team', businesses: 28, revenue: '$76,200', target: 35 },
+  ];
+
+  const businessFeatures = [
+    { name: 'Dashboard Analytics', enabled: true, usage: '98%' },
+    { name: 'Campaign Management', enabled: true, usage: '87%' },
+    { name: 'Data Center', enabled: true, usage: '92%' },
+    { name: 'Tribly AI', enabled: false, usage: '0%' },
+    { name: 'Automation', enabled: true, usage: '78%' },
+    { name: 'Cohorts', enabled: true, usage: '65%' },
+  ];
+
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      active: 'success',
+      pending: 'warning',
+      trial: 'info',
+      inactive: 'destructive'
+    } as const;
+
+    return (
+      <Badge variant={variants[status as keyof typeof variants] || 'outline'}>
+        {status}
+      </Badge>
+    );
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Welcome Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Building2 className="h-6 w-6 text-primary" />
+              <span>Welcome back, {user?.name}!</span>
+            </CardTitle>
+            <CardDescription>
+              Here's what's happening with your Tribly business platform today.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((stat, index) => (
+            <Card key={index}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                    <p className="text-2xl font-bold">{stat.value}</p>
+                    <p className={`text-sm ${stat.changeType === 'increase' ? 'text-success' : 'text-destructive'}`}>
+                      {stat.change} from last month
+                    </p>
+                  </div>
+                  <stat.icon className={`h-8 w-8 ${stat.color}`} />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Recent Businesses */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Recent Businesses</span>
+                <Button variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Business
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentBusinesses.map((business) => (
+                  <div key={business.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <Building2 className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{business.name}</p>
+                        <p className="text-sm text-muted-foreground">{business.industry}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <p className="font-medium">{business.revenue}</p>
+                        <p className="text-sm text-muted-foreground">{business.onboardedAt}</p>
+                      </div>
+                      {getStatusBadge(business.status)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Team Performance */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Team Performance</CardTitle>
+              <CardDescription>Top performers this month</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {teamPerformance.map((member, index) => (
+                  <div key={index} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{member.name}</p>
+                        <p className="text-sm text-muted-foreground">{member.role}</p>
+                      </div>
+                      <Badge variant="outline">{member.businesses} businesses</Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>Progress</span>
+                        <span>{Math.round((member.businesses / member.target) * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div
+                          className="bg-primary h-2 rounded-full"
+                          style={{ width: `${Math.min((member.businesses / member.target) * 100, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">Revenue: {member.revenue}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Feature Usage & Quick Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Feature Usage */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Feature Usage</CardTitle>
+              <CardDescription>Most used business features</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {businessFeatures.map((feature, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-2 h-2 rounded-full ${feature.enabled ? 'bg-success' : 'bg-muted-foreground'}`} />
+                      <span className="font-medium">{feature.name}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-20 bg-muted rounded-full h-2">
+                        <div
+                          className="bg-primary h-2 rounded-full"
+                          style={{ width: feature.usage }}
+                        />
+                      </div>
+                      <span className="text-sm text-muted-foreground w-12">{feature.usage}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>Common administrative tasks</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="outline" className="h-20 flex-col space-y-2">
+                  <Building2 className="h-5 w-5" />
+                  <span className="text-sm">Onboard Business</span>
+                </Button>
+                <Button variant="outline" className="h-20 flex-col space-y-2">
+                  <Users className="h-5 w-5" />
+                  <span className="text-sm">Add Team Member</span>
+                </Button>
+                <Button variant="outline" className="h-20 flex-col space-y-2">
+                  <Zap className="h-5 w-5" />
+                  <span className="text-sm">Manage Features</span>
+                </Button>
+                <Button variant="outline" className="h-20 flex-col space-y-2">
+                  <BarChart3 className="h-5 w-5" />
+                  <span className="text-sm">View Analytics</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* System Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle>System Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-5 w-5 text-success" />
+                <div>
+                  <p className="font-medium">API Services</p>
+                  <p className="text-sm text-muted-foreground">All systems operational</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-5 w-5 text-success" />
+                <div>
+                  <p className="font-medium">Database</p>
+                  <p className="text-sm text-muted-foreground">Connected</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <AlertCircle className="h-5 w-5 text-warning" />
+                <div>
+                  <p className="font-medium">Email Service</p>
+                  <p className="text-sm text-muted-foreground">Minor delays</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-5 w-5 text-success" />
+                <div>
+                  <p className="font-medium">Payment Gateway</p>
+                  <p className="text-sm text-muted-foreground">Processing normally</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
   );
 }
