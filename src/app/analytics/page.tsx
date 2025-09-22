@@ -16,11 +16,9 @@ import {
   Calendar,
   Download,
   Filter,
-  RefreshCw
 } from 'lucide-react';
 
 export default function AnalyticsPage() {
-  const { hasRole } = useAuth();
 
   // Mock data
   const revenueData = [
@@ -54,18 +52,6 @@ export default function AnalyticsPage() {
     { name: 'Emily Davis', businesses: 28, revenue: 76200, target: 35 }
   ];
 
-  if (!hasRole('manager')) {
-    return (
-      <div className="min-h-screen bg-[#f6f6f6] p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold">Access Denied</h2>
-            <p className="text-muted-foreground">You don't have permission to access this page.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#f6f6f6] p-6">
@@ -84,10 +70,6 @@ export default function AnalyticsPage() {
             <Button variant="outline" size="sm">
               <Download className="h-4 w-4 mr-2" />
               Export
-            </Button>
-            <Button variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
             </Button>
           </div>
         </div>

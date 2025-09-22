@@ -137,9 +137,9 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
         </div>
       </button>
 
-      {/* Dropdown Menu */}
+      {/* Desktop Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+        <div className="hidden lg:block absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
           {/* User Info Header */}
           <div className="p-4 border-b border-gray-100">
             <div className="flex items-center gap-3 mb-3">
@@ -215,6 +215,101 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
                 <LogOut className="h-4 w-4" />
                 <span>Sign Out</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Bottom Sheet */}
+      {isOpen && (
+        <div className="lg:hidden fixed inset-0 z-50">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setIsOpen(false)}
+          />
+          
+          {/* Bottom Sheet */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl transform transition-transform duration-300 ease-out">
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+            
+            {/* User Info Header */}
+            <div className="px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-4 mb-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={user.avatar} />
+                  <AvatarFallback className="bg-[#e9e9e9] text-[#2a2a2f] text-xl">
+                    {getInitials(user.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 text-xl">{user.name}</h3>
+                  <Badge className={`mt-2 ${getRoleColor(user.role)}`}>
+                    {getRoleDisplayName(user.role)}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Menu */}
+            <div className="px-4 py-4 max-h-96 overflow-y-auto">
+              <div className="space-y-2">
+                {/* Profile Management */}
+                <button
+                  onClick={handleProfileClick}
+                  className="w-full flex items-center gap-4 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
+                >
+                  <User className="h-5 w-5" />
+                  <span className="text-lg">Profile Settings</span>
+                </button>
+
+                <button
+                  onClick={handleNotificationsClick}
+                  className="w-full flex items-center gap-4 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
+                >
+                  <div className="relative">
+                    <Bell className="h-5 w-5" />
+                    {userStats.notifications > 0 && (
+                      <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+                        {userStats.notifications}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-lg">Notifications</span>
+                </button>
+
+                {/* Account Info */}
+                <div className="border-t border-gray-100 my-4"></div>
+                
+                <div className="px-4 py-3 text-sm text-gray-500 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4" />
+                    <span>{user.email}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4" />
+                    <span>Member since {formatDate(user.createdAt)}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-4 w-4" />
+                    <span>{user.permissions.length} permissions</span>
+                  </div>
+                </div>
+
+                {/* Logout */}
+                <div className="border-t border-gray-100 my-4"></div>
+                
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-4 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span className="text-lg">Sign Out</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

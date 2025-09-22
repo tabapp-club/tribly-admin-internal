@@ -21,6 +21,22 @@
   --info: #1B84FF;
   --error: #FF6B6B;
 
+  /* Soft Status Colors */
+  --success-soft: #D1FAE5;
+  --warning-soft: #FEF3C7;
+  --info-soft: #DBEAFE;
+  --error-soft: #FEE2E2;
+  --purple-soft: #F3E8FF;
+  --blue-soft: #E0F2FE;
+
+  /* Soft Status Border Colors */
+  --success-soft-border: #A7F3D0;
+  --warning-soft-border: #FDE68A;
+  --info-soft-border: #BFDBFE;
+  --error-soft-border: #FECACA;
+  --purple-soft-border: #E9D5FF;
+  --blue-soft-border: #BAE6FD;
+
   /* Additional Colors */
   --card: #FFFFFF;
   --card-foreground: #2A2A2F;
@@ -49,6 +65,18 @@
   --color-warning: var(--warning);
   --color-info: var(--info);
   --color-error: var(--error);
+  --color-success-soft: var(--success-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-info-soft: var(--info-soft);
+  --color-error-soft: var(--error-soft);
+  --color-purple-soft: var(--purple-soft);
+  --color-blue-soft: var(--blue-soft);
+  --color-success-soft-border: var(--success-soft-border);
+  --color-warning-soft-border: var(--warning-soft-border);
+  --color-info-soft-border: var(--info-soft-border);
+  --color-error-soft-border: var(--error-soft-border);
+  --color-purple-soft-border: var(--purple-soft-border);
+  --color-blue-soft-border: var(--blue-soft-border);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);

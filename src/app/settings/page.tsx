@@ -16,15 +16,14 @@ import {
   User,
   Bell,
   Shield,
-  Database,
   Mail,
+  Phone,
   Globe,
   Save,
   AlertCircle,
   CheckCircle,
   Info,
-  ChevronDown,
-  ArrowLeft
+  ChevronDown
 } from 'lucide-react';
 
 interface TabItem {
@@ -37,19 +36,19 @@ interface TabItem {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, hasRole } = useAuth();
+  const { user } = useAuth();
   const { addNotification } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
 
   // Settings state
-  const [generalSettings, setGeneralSettings] = useState({
-    platformName: 'Tribly Admin',
-    platformUrl: 'https://admin.tribly.com',
-    supportEmail: 'support@tribly.com',
-    timezone: 'UTC',
-    dateFormat: 'MM/DD/YYYY',
-    currency: 'USD'
+  const [profileSettings, setProfileSettings] = useState({
+    firstName: 'Admin',
+    lastName: 'User',
+    email: 'admin@tribly.com',
+    phone: '+1 (555) 123-4567',
+    jobTitle: 'Platform Administrator',
+    department: 'Operations'
   });
 
   const [notificationSettings, setNotificationSettings] = useState({
@@ -65,17 +64,16 @@ export default function SettingsPage() {
     twoFactorAuth: false,
     sessionTimeout: 30,
     passwordPolicy: 'strong',
-    ipWhitelist: false,
-    auditLogging: true
+    ipWhitelist: false
   });
 
   const tabs: TabItem[] = [
     {
       id: 'general',
-      title: 'General settings',
-      description: 'Basic platform configuration',
+      title: 'Profile settings',
+      description: 'Personal information and preferences',
       icon: Settings,
-      completed: !!(generalSettings.platformName && generalSettings.platformUrl && generalSettings.supportEmail)
+      completed: !!(profileSettings.firstName && profileSettings.lastName && profileSettings.email)
     },
     {
       id: 'notifications',
@@ -89,15 +87,8 @@ export default function SettingsPage() {
       title: 'Security settings',
       description: 'Authentication and security policies',
       icon: Shield,
-      completed: !!(securitySettings.twoFactorAuth || securitySettings.auditLogging)
+      completed: !!(securitySettings.twoFactorAuth || securitySettings.ipWhitelist)
     },
-    {
-      id: 'system',
-      title: 'System settings',
-      description: 'Advanced system configuration',
-      icon: Database,
-      completed: !!(securitySettings.auditLogging)
-    }
   ];
 
   const handleSave = async (section: string) => {
@@ -122,19 +113,6 @@ export default function SettingsPage() {
     }
   };
 
-  if (!hasRole('manager')) {
-    return (
-      <div className="min-h-screen bg-[#f6f6f6] p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-            <h2 className="text-xl font-semibold">Access Denied</h2>
-            <p className="text-muted-foreground">You don't have permission to access this page.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const handleBack = () => {
     router.back();
@@ -147,83 +125,83 @@ export default function SettingsPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label htmlFor="platformName" className="mb-0.5">Platform Name *</Label>
+                <Label htmlFor="firstName" className="mb-0.5">First Name *</Label>
                 <Input
-                  id="platformName"
-                  value={generalSettings.platformName}
-                  onChange={(e) => setGeneralSettings(prev => ({ ...prev, platformName: e.target.value }))}
-                  placeholder="Platform name"
+                  id="firstName"
+                  value={profileSettings.firstName}
+                  onChange={(e) => setProfileSettings(prev => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="Enter first name"
                 />
               </div>
 
               <div>
-                <Label htmlFor="platformUrl" className="mb-0.5">Platform URL *</Label>
+                <Label htmlFor="lastName" className="mb-0.5">Last Name *</Label>
                 <Input
-                  id="platformUrl"
-                  value={generalSettings.platformUrl}
-                  onChange={(e) => setGeneralSettings(prev => ({ ...prev, platformUrl: e.target.value }))}
-                  placeholder="https://platform.com"
+                  id="lastName"
+                  value={profileSettings.lastName}
+                  onChange={(e) => setProfileSettings(prev => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Enter last name"
                 />
               </div>
 
               <div>
-                <Label htmlFor="supportEmail" className="mb-0.5">Support Email *</Label>
+                <Label htmlFor="email" className="mb-0.5">Email Address *</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="supportEmail"
+                    id="email"
                     type="email"
-                    value={generalSettings.supportEmail}
-                    onChange={(e) => setGeneralSettings(prev => ({ ...prev, supportEmail: e.target.value }))}
-                    placeholder="support@platform.com"
+                    value={profileSettings.email}
+                    onChange={(e) => setProfileSettings(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="Enter email address"
                     className="pl-10"
                   />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="timezone" className="mb-0.5">Timezone</Label>
-                <Select value={generalSettings.timezone} onValueChange={(value) => setGeneralSettings(prev => ({ ...prev, timezone: value }))}>
+                <Label htmlFor="phone" className="mb-0.5">Phone Number</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={profileSettings.phone}
+                    onChange={(e) => setProfileSettings(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="Enter phone number"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="jobTitle" className="mb-0.5">Job Title</Label>
+                <Input
+                  id="jobTitle"
+                  value={profileSettings.jobTitle}
+                  onChange={(e) => setProfileSettings(prev => ({ ...prev, jobTitle: e.target.value }))}
+                  placeholder="Enter job title"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="department" className="mb-0.5">Department</Label>
+                <Select value={profileSettings.department} onValueChange={(value) => setProfileSettings(prev => ({ ...prev, department: value }))}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select timezone" />
+                    <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="UTC">UTC</SelectItem>
-                    <SelectItem value="EST">Eastern Time</SelectItem>
-                    <SelectItem value="PST">Pacific Time</SelectItem>
-                    <SelectItem value="GMT">Greenwich Mean Time</SelectItem>
+                    <SelectItem value="Operations">Operations</SelectItem>
+                    <SelectItem value="Engineering">Engineering</SelectItem>
+                    <SelectItem value="Sales">Sales</SelectItem>
+                    <SelectItem value="Marketing">Marketing</SelectItem>
+                    <SelectItem value="Support">Support</SelectItem>
+                    <SelectItem value="Finance">Finance</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div>
-                <Label htmlFor="dateFormat" className="mb-0.5">Date Format</Label>
-                <Select value={generalSettings.dateFormat} onValueChange={(value) => setGeneralSettings(prev => ({ ...prev, dateFormat: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select date format" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                    <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                    <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
-              <div>
-                <Label htmlFor="currency" className="mb-0.5">Currency</Label>
-                <Select value={generalSettings.currency} onValueChange={(value) => setGeneralSettings(prev => ({ ...prev, currency: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">USD - US Dollar</SelectItem>
-                    <SelectItem value="EUR">EUR - Euro</SelectItem>
-                    <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                    <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </div>
         );
@@ -375,66 +353,6 @@ export default function SettingsPage() {
           </div>
         );
 
-      case 'system':
-        return (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="maintenanceMode">Maintenance Mode</Label>
-                  <p className="text-sm text-gray-500">Put the system in maintenance mode</p>
-                </div>
-                <Switch
-                  id="maintenanceMode"
-                  checked={false}
-                  onCheckedChange={() => {}}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="debugMode">Debug Mode</Label>
-                  <p className="text-sm text-gray-500">Enable detailed logging and debugging</p>
-                </div>
-                <Switch
-                  id="debugMode"
-                  checked={false}
-                  onCheckedChange={() => {}}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="logLevel" className="mb-0.5">Log Level</Label>
-                <Select value="info" onValueChange={() => {}}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select log level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="error">Error</SelectItem>
-                    <SelectItem value="warn">Warning</SelectItem>
-                    <SelectItem value="info">Info</SelectItem>
-                    <SelectItem value="debug">Debug</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="backupFrequency" className="mb-0.5">Backup Frequency</Label>
-                <Select value="daily" onValueChange={() => {}}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select backup frequency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hourly">Hourly</SelectItem>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        );
 
       default:
         return null;
@@ -448,22 +366,23 @@ export default function SettingsPage() {
         <div className="flex gap-[7px] items-start mb-12">
           <button 
             onClick={handleBack}
-            className="overflow-clip relative shrink-0 size-[32px] hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
+            className="flex items-center justify-center shrink-0 size-[32px] hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
             aria-label="Go back"
           >
-            <div className="absolute flex h-[16px] items-center justify-center left-[2px] top-[8px] w-[28px]">
-              <div className="flex-none rotate-[180deg]">
-                <div className="h-[16px] relative w-[28px]">
-                  <div className="absolute flex inset-[6.82%_4.09%] items-center justify-center">
-                    <div className="flex-none h-[13.816px] rotate-[180deg] w-[25.709px]">
-                      <div className="relative size-full">
-                        <img alt="" className="block max-w-none size-full" src="http://localhost:3845/assets/e93f530dec15b9aeeb889e89d7a05b8c41519245.svg" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <svg 
+              width="32" 
+              height="32" 
+              viewBox="0 0 32 32" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path 
+                fillRule="evenodd" 
+                clipRule="evenodd" 
+                d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z" 
+                fill="#0D0D0D"
+              />
+            </svg>
           </button>
           <div className="flex flex-col items-start leading-[0] relative shrink-0 text-black">
             <div className="flex flex-col font-bold justify-center relative shrink-0 text-[24px]">
@@ -475,14 +394,78 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Main Content Area */}
-        <div className="flex flex-col lg:flex-row gap-8 lg:gap-[55px] items-start w-full relative">
+        {/* Mobile Layout */}
+        <div className="block lg:hidden space-y-4">
+          {/* Mobile Tab Selector */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            {/* Mobile Tab Navigation */}
+            <div className="grid grid-cols-2 gap-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+                    activeTab === tab.id
+                      ? 'bg-[#6E4EFF] text-white'
+                      : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                    activeTab === tab.id
+                      ? 'bg-white/20'
+                      : tab.completed
+                        ? 'bg-green-100 text-green-600'
+                        : 'bg-gray-200 text-gray-600'
+                  }`}>
+                    {tab.completed ? (
+                      <CheckCircle className="h-4 w-4" />
+                    ) : (
+                      <tab.icon className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-medium">{tab.title}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Mobile Content Area */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            {renderTabContent()}
+            
+            {/* Mobile Save Button */}
+            <div className="mt-6 pt-4 border-t border-gray-100">
+              <Button
+                onClick={() => handleSave(activeTab)}
+                disabled={isLoading}
+                className="w-full bg-[#6e4eff] hover:bg-[#5a3fd9] text-white h-12"
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Saving...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Save className="h-4 w-4" />
+                    <span>Save Settings</span>
+                  </div>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Layout */}
+        <div className="hidden lg:flex flex-col lg:flex-row gap-8 lg:gap-[55px] items-start w-full relative">
           {/* Left Sidebar - Tab Navigation */}
-          <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full lg:w-[320px] max-h-[60vh] lg:max-h-none overflow-y-auto lg:overflow-visible">
+          <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-[320px] max-h-[60vh] lg:max-h-none overflow-y-auto lg:overflow-visible">
             {tabs.map((tab) => (
               <div
                 key={tab.id}
-                className={`bg-white relative rounded-[4px] shrink-0 w-full lg:w-[299px] cursor-pointer transition-all min-h-[76px] ${
+                className={`bg-white relative rounded-[4px] shrink-0 w-[299px] cursor-pointer transition-all min-h-[76px] ${
                   activeTab === tab.id ? 'ring-2 ring-blue-500 shadow-md' : 'hover:shadow-sm'
                 }`}
                 onClick={() => setActiveTab(tab.id)}
@@ -517,7 +500,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Right Content Area */}
-          <div className="bg-white rounded-lg p-4 lg:p-8 flex-1 min-h-[381px] shadow-sm w-full lg:ml-0">
+          <div className="bg-white rounded-lg p-8 flex-1 min-h-[381px] shadow-sm w-full lg:ml-0">
             <div className="mb-6">
               <div className="flex items-start gap-3 mb-0">
                 {(() => {

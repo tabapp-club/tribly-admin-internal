@@ -1,46 +1,81 @@
-'use client'
+'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
-import { User, UserRole } from '@/types'
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User, UserRole } from '@/types';
 
 interface AuthContextType {
-  user: User | null
-  isAuthenticated: boolean
-  isLoading: boolean
-  login: (email: string, password: string) => Promise<void>
-  logout: () => void
-  hasPermission: (resource: string, action: string) => boolean
-  hasRole: (role: UserRole) => boolean
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  hasPermission: (resource: string, action: string) => boolean;
+  hasRole: (role: UserRole) => boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check for existing session
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('auth_token')
+        const token = localStorage.getItem('auth_token');
         if (token) {
           // In a real app, validate token with backend
-          const userData = JSON.parse(localStorage.getItem('user_data') || '{}')
-          setUser(userData)
+          const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
+          setUser(userData);
+        } else {
+          // Auto-login for development - remove in production
+          const mockUser: User = {
+            id: '1',
+            name: 'Admin User',
+            email: 'admin@tribly.com',
+            role: 'master',
+            isActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            permissions: [
+              { id: '1', name: 'All Access', description: 'Full system access', resource: '*', action: '*' }
+            ]
+          };
+          
+          localStorage.setItem('auth_token', 'mock_token');
+          localStorage.setItem('user_data', JSON.stringify(mockUser));
+          setUser(mockUser);
         }
       } catch (error) {
-        console.error('Auth check failed:', error)
+        console.error('Auth check failed:', error);
+        // Auto-login for development even on error
+        const mockUser: User = {
+          id: '1',
+          name: 'Admin User',
+          email: 'admin@tribly.com',
+          role: 'master',
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          permissions: [
+            { id: '1', name: 'All Access', description: 'Full system access', resource: '*', action: '*' }
+          ]
+        };
+        
+        localStorage.setItem('auth_token', 'mock_token');
+        localStorage.setItem('user_data', JSON.stringify(mockUser));
+        setUser(mockUser);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    checkAuth()
-  }, [])
+    checkAuth();
+  }, []);
 
   const login = async (email: string, password: string) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       // Mock login - replace with actual API call
       if (email === 'admin@tribly.com' && password === 'admin123') {
@@ -55,48 +90,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           permissions: [
             { id: '1', name: 'All Access', description: 'Full system access', resource: '*', action: '*' }
           ]
-        }
+        };
 
-        localStorage.setItem('auth_token', 'mock_token')
-        localStorage.setItem('user_data', JSON.stringify(mockUser))
-        setUser(mockUser)
+        localStorage.setItem('auth_token', 'mock_token');
+        localStorage.setItem('user_data', JSON.stringify(mockUser));
+        setUser(mockUser);
       } else {
-        throw new Error('Invalid credentials')
+        throw new Error('Invalid credentials');
       }
     } catch (error) {
-      throw error
+      throw error;
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const logout = () => {
-    localStorage.removeItem('auth_token')
-    localStorage.removeItem('user_data')
-    setUser(null)
-  }
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
+    setUser(null);
+  };
 
   const hasPermission = (resource: string, action: string): boolean => {
-    if (!user) return false
-
-    // Master role has all permissions
-    if (user.role === 'master') return true
-
-    return user.permissions.some(
-      permission =>
-        (permission.resource === '*' || permission.resource === resource) &&
-        (permission.action === '*' || permission.action === action)
-    )
-  }
+    if (!user) return false;
+    
+    return user.permissions.some(permission => 
+      (permission.resource === '*' || permission.resource === resource) &&
+      (permission.action === '*' || permission.action === action)
+    );
+  };
 
   const hasRole = (role: UserRole): boolean => {
-    if (!user) return false
+    if (!user) return false;
+    return user.role === role;
+  };
 
-    const roleHierarchy = { master: 3, manager: 2, team: 1 }
-    return roleHierarchy[user.role] >= roleHierarchy[role]
-  }
-
-  const value = {
+  const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
     isLoading,
@@ -104,15 +133,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     hasPermission,
     hasRole,
-  }
+  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context
+  return context;
 }

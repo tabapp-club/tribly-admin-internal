@@ -20,6 +20,18 @@ const badgeVariants = cva(
           "border-transparent bg-warning text-white hover:bg-warning/80",
         info:
           "border-transparent bg-info text-white hover:bg-info/80",
+        "success-soft":
+          "border-success-soft-border bg-success-soft text-green-700 hover:bg-success-soft/80",
+        "warning-soft":
+          "border-warning-soft-border bg-warning-soft text-amber-700 hover:bg-warning-soft/80",
+        "info-soft":
+          "border-info-soft-border bg-info-soft text-blue-700 hover:bg-info-soft/80",
+        "error-soft":
+          "border-error-soft-border bg-error-soft text-red-700 hover:bg-error-soft/80",
+        "purple-soft":
+          "border-purple-soft-border bg-purple-soft text-purple-700 hover:bg-purple-soft/80",
+        "blue-soft":
+          "border-blue-soft-border bg-blue-soft text-blue-700 hover:bg-blue-soft/80",
       },
     },
     defaultVariants: {

@@ -29,8 +29,6 @@ import {
   MapPin,
   Globe,
   CheckCircle,
-  ArrowRight,
-  ArrowLeft,
   Users,
   DollarSign,
   Target,
@@ -141,7 +139,7 @@ const validatePAN = (pan: string): boolean => {
 
 export default function BusinessOnboardingPage() {
   const router = useRouter();
-  const { hasRole, isLoading } = useAuth();
+  const { isLoading } = useAuth();
   const { addNotification } = useNotifications();
   const [activeTab, setActiveTab] = useState('basic-info');
   const [formData, setFormData] = useState({
@@ -998,17 +996,6 @@ export default function BusinessOnboardingPage() {
     );
   }
 
-  if (!hasRole('manager')) {
-    return (
-      <div className="min-h-screen bg-[#f6f6f6] flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-          <h2 className="text-xl font-semibold">Access Denied</h2>
-          <p className="text-muted-foreground">You don't have permission to access this page.</p>
-        </div>
-      </div>
-    );
-  }
 
   const handleBack = () => {
     router.back();
@@ -1037,22 +1024,23 @@ export default function BusinessOnboardingPage() {
         <div className="flex gap-[7px] items-start mb-12">
           <button 
             onClick={handleBack}
-            className="overflow-clip relative shrink-0 size-[32px] hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
+            className="flex items-center justify-center shrink-0 size-[32px] hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
             aria-label="Go back"
           >
-            <div className="absolute flex h-[16px] items-center justify-center left-[2px] top-[8px] w-[28px]">
-              <div className="flex-none rotate-[180deg]">
-                <div className="h-[16px] relative w-[28px]">
-                  <div className="absolute flex inset-[6.82%_4.09%] items-center justify-center">
-                    <div className="flex-none h-[13.816px] rotate-[180deg] w-[25.709px]">
-                      <div className="relative size-full">
-                        <img alt="" className="block max-w-none size-full" src="http://localhost:3845/assets/e93f530dec15b9aeeb889e89d7a05b8c41519245.svg" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <svg 
+              width="32" 
+              height="32" 
+              viewBox="0 0 32 32" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path 
+                fillRule="evenodd" 
+                clipRule="evenodd" 
+                d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z" 
+                fill="#0D0D0D"
+              />
+            </svg>
           </button>
           <div className="flex flex-col items-start leading-[0] relative shrink-0 text-black">
             <div className="flex flex-col font-bold justify-center relative shrink-0 text-[24px]">
@@ -1178,7 +1166,21 @@ export default function BusinessOnboardingPage() {
                     onClick={handleTabBack}
                     className="bg-gray-100 box-border flex gap-[8px] h-[48px] items-center justify-center px-[16px] py-[12px] rounded-[4px] w-full sm:w-[120px] hover:bg-gray-200 transition-colors border border-gray-300"
                   >
-                    <ArrowLeft className="h-4 w-4 text-gray-600" />
+                    <svg 
+                      width="16" 
+                      height="16" 
+                      viewBox="0 0 32 32" 
+                      fill="none" 
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="text-gray-600"
+                    >
+                      <path 
+                        fillRule="evenodd" 
+                        clipRule="evenodd" 
+                        d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z" 
+                        fill="currentColor"
+                      />
+                    </svg>
                     <span className="text-gray-700 font-medium">Back</span>
                   </button>
                 )}
@@ -1250,7 +1252,20 @@ export default function BusinessOnboardingPage() {
                 disabled={tabs.findIndex(tab => tab.id === activeTab) === 0}
                 className="flex items-center gap-2 px-6 py-3 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 rounded-lg"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <svg 
+              width="16" 
+              height="16" 
+              viewBox="0 0 32 32" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path 
+                fillRule="evenodd" 
+                clipRule="evenodd" 
+                d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z" 
+                fill="currentColor"
+              />
+            </svg>
                 <span className="text-sm font-medium">Previous</span>
               </button>
 
@@ -1274,7 +1289,20 @@ export default function BusinessOnboardingPage() {
                     <span className="text-sm font-medium">
                       {tabs.findIndex(tab => tab.id === activeTab) === tabs.length - 1 ? 'Complete' : 'Next'}
                     </span>
-              <ArrowRight className="h-4 w-4" />
+              <svg 
+                width="16" 
+                height="16" 
+                viewBox="0 0 32 32" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path 
+                  fillRule="evenodd" 
+                  clipRule="evenodd" 
+                  d="M28.8545 16.0001C28.0812 16.5332 26.8287 17.8511 25.8945 19.1469C24.7268 20.7668 24.0615 21.8096 23.6813 22.9082L22.1063 21.8471C22.2602 21.2016 23.0187 19.3706 24.8219 17.2106L3.14527 17.2106L3.14527 16.0001L28.8545 16.0001ZM28.8545 15.9999C28.0812 15.4668 26.8287 14.1489 25.8945 12.8531C24.7268 11.2332 24.0615 10.1904 23.6813 9.0918L22.1063 10.1529C22.2602 10.7984 23.0187 12.6294 24.8219 14.7894L3.14527 14.7894L3.14527 15.9999L28.8545 15.9999Z" 
+                  fill="currentColor"
+                />
+              </svg>
                   </>
                 )}
               </button>
