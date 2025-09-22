@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -11,6 +11,16 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Building2,
   User,
@@ -35,7 +45,15 @@ import {
   Home,
   FileCheck,
   Settings,
-  Contact
+  Send,
+  Loader2,
+  Save,
+  AlertTriangle,
+  X,
+  Plus,
+  Trash2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 interface TabItem {
@@ -46,26 +64,96 @@ interface TabItem {
   completed: boolean;
 }
 
+interface FormData {
+  brandName: string;
+  businessType: string;
+  website: string;
+  description: string;
+  businessEmails: string[];
+  businessPhones: string[];
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  gstNumber: string;
+  panNumber: string;
+  businessRegistrationNumber: string;
+  posSystem: string;
+  posProvider: string;
+  posVersion: string;
+  terminalId: string;
+  serialNumber: string;
+  installationDate: string;
+  licenseKey: string;
+  pocName: string;
+  pocEmail: string;
+  pocPhone: string;
+  pocDesignation: string;
+}
+
+interface ValidationErrors {
+  [key: string]: string | string[];
+}
+
+interface LoadingState {
+  saving: boolean;
+  submitting: boolean;
+  validating: boolean;
+  [key: string]: boolean;
+}
+
+interface AutoSaveState {
+  lastSaved: Date | null;
+  hasUnsavedChanges: boolean;
+  isAutoSaving: boolean;
+}
+
+// Validation functions
+const validateEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+const validatePhone = (phone: string): boolean => {
+  const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
+  return phoneRegex.test(phone);
+};
+
+const validateURL = (url: string): boolean => {
+  try {
+    new URL(url.startsWith('http') ? url : `https://${url}`);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const validateGST = (gst: string): boolean => {
+  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+  return gstRegex.test(gst);
+};
+
+const validatePAN = (pan: string): boolean => {
+  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+  return panRegex.test(pan);
+};
+
 export default function BusinessOnboardingPage() {
   const router = useRouter();
-  const { hasRole } = useAuth();
+  const { hasRole, isLoading } = useAuth();
   const { addNotification } = useNotifications();
   const [activeTab, setActiveTab] = useState('basic-info');
   const [formData, setFormData] = useState({
     // Basic Information
-    businessName: '',
-    industry: '',
+    brandName: '',
     businessType: '',
-    businessSize: '',
     website: '',
     description: '',
 
     // Contact Information
-    contactPerson: '',
-    contactEmail: '',
-    contactPhone: '',
-    alternateEmail: '',
-    alternatePhone: '',
+    businessEmails: [''],
+    businessPhones: [''],
 
     // Business Address
     streetAddress: '',
@@ -73,67 +161,82 @@ export default function BusinessOnboardingPage() {
     state: '',
     zipCode: '',
     country: '',
-    timezone: '',
 
     // Business Registration
-    registrationNumber: '',
-    taxId: '',
-    businessLicense: '',
-    incorporationDate: '',
-    legalStructure: '',
+    gstNumber: '',
+    panNumber: '',
+    businessRegistrationNumber: '',
 
-    // POS/Accounting Details
+    // POS System Details
     posSystem: '',
-    accountingSoftware: '',
-    paymentProcessor: '',
-    bankName: '',
-    accountNumber: '',
-    routingNumber: '',
+    posProvider: '',
+    posVersion: '',
+    terminalId: '',
+    serialNumber: '',
+    installationDate: '',
+    licenseKey: '',
 
     // Primary POC Details
     pocName: '',
-    pocTitle: '',
     pocEmail: '',
     pocPhone: '',
-    pocDepartment: '',
-    pocNotes: ''
+    pocDesignation: ''
   });
+
+  // Production-ready state management
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [loadingState, setLoadingState] = useState<LoadingState>({
+    saving: false,
+    submitting: false,
+    validating: false,
+  });
+  const [autoSaveState, setAutoSaveState] = useState<AutoSaveState>({
+    lastSaved: null,
+    hasUnsavedChanges: false,
+    isAutoSaving: false,
+  });
+  const [showExitDialog, setShowExitDialog] = useState(false);
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const tabs: TabItem[] = [
     {
       id: 'basic-info',
       title: 'Basic information',
-      description: 'Company name, industry, and type',
+      description: 'Brand name, business type, and website',
       icon: Briefcase,
-      completed: !!(formData.businessName && formData.industry && formData.businessType)
+      completed: !!(formData.brandName && formData.businessType && formData.website)
     },
     {
       id: 'contact-info',
-      title: 'Contact information',
-      description: 'Primary and alternate contacts',
-      icon: Contact,
-      completed: !!(formData.contactPerson && formData.contactEmail && formData.contactPhone)
+      title: 'Contact Information',
+      description: 'Business emails and phone numbers',
+      icon: Mail,
+      completed: !!(formData.businessEmails.some(email => email.trim()) && formData.businessPhones.some(phone => phone.trim()))
     },
     {
       id: 'business-address',
       title: 'Business address',
-      description: 'Physical location and timezone',
+      description: 'Physical location and address',
       icon: Home,
       completed: !!(formData.streetAddress && formData.city && formData.state && formData.zipCode)
     },
     {
       id: 'business-registration',
       title: 'Business registration',
-      description: 'Legal documents and tax info',
+      description: 'GST, PAN, and registration details',
       icon: FileCheck,
-      completed: !!(formData.registrationNumber && formData.taxId && formData.legalStructure)
+      completed: !!(formData.gstNumber && formData.panNumber && formData.businessRegistrationNumber)
     },
     {
       id: 'pos-accounting',
-      title: 'POS/accounting details',
-      description: 'Payment and accounting systems',
+      title: 'POS System Details',
+      description: 'POS system and configuration',
       icon: Settings,
-      completed: !!(formData.posSystem && formData.accountingSoftware && formData.paymentProcessor)
+      completed: !!(formData.posSystem && formData.posProvider && formData.terminalId)
     },
     {
       id: 'primary-poc',
@@ -141,99 +244,519 @@ export default function BusinessOnboardingPage() {
       description: 'Main point of contact info',
       icon: UserCheck,
       completed: !!(formData.pocName && formData.pocEmail && formData.pocPhone)
+    },
+    {
+      id: 'agreements-welcome',
+      title: 'Documents & Welcome Kit',
+      description: 'Send agreement and welcome kit',
+      icon: Send,
+      completed: false
     }
   ];
 
-  const industries = [
-    'Technology', 'Retail', 'Healthcare', 'Finance', 'Education',
-    'Manufacturing', 'Real Estate', 'Consulting', 'E-commerce', 'Other'
-  ];
-
   const businessTypes = [
-    'Corporation', 'LLC', 'Partnership', 'Sole Proprietorship', 'Non-profit'
+    'Retail', 'Restaurant', 'Services', 'Manufacturing', 'Wholesale', 'E-commerce', 'Consulting', 'Other'
   ];
 
-  const businessSizes = [
-    'Startup (1-10 employees)',
-    'Small (11-50 employees)',
-    'Medium (51-200 employees)',
-    'Enterprise (200+ employees)'
-  ];
-
-  const legalStructures = [
-    'Corporation', 'LLC', 'Partnership', 'Sole Proprietorship', 'Non-profit', 'Other'
+  const countries = [
+    'India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 'Japan', 'Other'
   ];
 
   const posSystems = [
-    'Square', 'Shopify POS', 'Clover', 'Toast', 'Lightspeed', 'Revel', 'Other'
+    'Square', 'Shopify POS', 'Clover', 'Toast', 'Lightspeed', 'Revel Systems',
+    'NCR Silver', 'Vend', 'QuickBooks POS', 'Other'
   ];
 
-  const accountingSoftware = [
-    'QuickBooks', 'Xero', 'FreshBooks', 'Wave', 'Sage', 'Other'
-  ];
+  // Comprehensive validation function
+  const validateField = useCallback((field: string, value: string | string[]): string | null => {
+    switch (field) {
+      case 'brandName':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (!value.trim()) return 'Brand name is required';
+        if (value.trim().length < 2) return 'Brand name must be at least 2 characters';
+        if (value.trim().length > 100) return 'Brand name must be less than 100 characters';
+        return null;
+      
+      case 'businessType':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (!value) return 'Business type is required';
+        return null;
+      
+      case 'website':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (value && !validateURL(value)) return 'Please enter a valid website URL';
+        return null;
+      
+      case 'description':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (value && value.length > 500) return 'Description must be less than 500 characters';
+        return null;
+      
+      case 'streetAddress':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (!value.trim()) return 'Street address is required';
+        if (value.trim().length < 5) return 'Street address must be at least 5 characters';
+        return null;
+      
+      case 'city':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (!value.trim()) return 'City is required';
+        if (value.trim().length < 2) return 'City must be at least 2 characters';
+        return null;
+      
+      case 'state':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (!value.trim()) return 'State is required';
+        if (value.trim().length < 2) return 'State must be at least 2 characters';
+        return null;
+      
+      case 'zipCode':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (!value.trim()) return 'ZIP code is required';
+        if (!/^\d{5,6}$/.test(value.trim())) return 'Please enter a valid ZIP code';
+        return null;
+      
+      case 'country':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (!value) return 'Country is required';
+        return null;
+      
+      case 'gstNumber':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (value && !validateGST(value)) return 'Please enter a valid GST number';
+        return null;
+      
+      case 'panNumber':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (value && !validatePAN(value)) return 'Please enter a valid PAN number';
+        return null;
+      
+      case 'pocName':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (!value.trim()) return 'POC name is required';
+        if (value.trim().length < 2) return 'POC name must be at least 2 characters';
+        return null;
+      
+      case 'pocEmail':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (!value.trim()) return 'POC email is required';
+        if (!validateEmail(value)) return 'Please enter a valid email address';
+        return null;
+      
+      case 'pocPhone':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (!value.trim()) return 'POC phone is required';
+        if (!validatePhone(value)) return 'Please enter a valid phone number';
+        return null;
+      
+      case 'pocDesignation':
+        if (typeof value !== 'string') return 'Invalid value type';
+        if (!value.trim()) return 'POC designation is required';
+        if (value.trim().length < 2) return 'POC designation must be at least 2 characters';
+        return null;
+      
+      case 'businessEmails':
+        if (!Array.isArray(value)) return 'Invalid value type';
+        if (value.length === 0 || !value.some(email => email.trim())) return 'At least one business email is required';
+        for (const email of value) {
+          if (email.trim() && !validateEmail(email)) return 'Please enter a valid email address';
+        }
+        return null;
+      
+      case 'businessPhones':
+        if (!Array.isArray(value)) return 'Invalid value type';
+        if (value.length === 0 || !value.some(phone => phone.trim())) return 'At least one business phone is required';
+        for (const phone of value) {
+          if (phone.trim() && !validatePhone(phone)) return 'Please enter a valid phone number';
+        }
+        return null;
+      
+      default:
+        return null;
+    }
+  }, []);
 
-  const paymentProcessors = [
-    'Stripe', 'PayPal', 'Square', 'Authorize.Net', 'Braintree', 'Other'
-  ];
+  // Validate entire form
+  const validateForm = useCallback((): boolean => {
+    const errors: ValidationErrors = {};
+    let isValid = true;
 
-  const timezones = [
-    'UTC-12:00', 'UTC-11:00', 'UTC-10:00', 'UTC-09:00', 'UTC-08:00', 'UTC-07:00',
-    'UTC-06:00', 'UTC-05:00', 'UTC-04:00', 'UTC-03:00', 'UTC-02:00', 'UTC-01:00',
-    'UTC+00:00', 'UTC+01:00', 'UTC+02:00', 'UTC+03:00', 'UTC+04:00', 'UTC+05:00',
-    'UTC+06:00', 'UTC+07:00', 'UTC+08:00', 'UTC+09:00', 'UTC+10:00', 'UTC+11:00', 'UTC+12:00'
-  ];
+    // Required fields validation
+    const requiredFields = [
+      'brandName', 'businessType', 'businessEmails', 'businessPhones', 'streetAddress', 'city', 'state', 
+      'zipCode', 'country', 'pocName', 'pocEmail', 'pocPhone', 'pocDesignation'
+    ];
 
-  const handleInputChange = (field: string, value: string) => {
+    requiredFields.forEach(field => {
+      const fieldValue = formData[field as keyof FormData];
+      const error = validateField(field, fieldValue);
+      if (error) {
+        errors[field] = error;
+        isValid = false;
+      }
+    });
+
+    // Optional fields validation
+    const optionalFields = ['website', 'description', 'gstNumber', 'panNumber'];
+    optionalFields.forEach(field => {
+      const fieldValue = formData[field as keyof FormData];
+      if (fieldValue) {
+        const error = validateField(field, fieldValue);
+        if (error) {
+          errors[field] = error;
+          isValid = false;
+        }
+      }
+    });
+
+    setValidationErrors(errors);
+    setIsFormValid(isValid);
+    return isValid;
+  }, [formData, validateField]);
+
+  // Enhanced input change handler with validation
+  const handleInputChange = useCallback((field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
+    setTouchedFields(prev => new Set([...prev, field]));
+    
+    // Clear error for this field
+    if (validationErrors[field]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
 
-  const handleSubmit = () => {
+    // Mark as having unsaved changes
+    setAutoSaveState(prev => ({ ...prev, hasUnsavedChanges: true }));
+
+    // Auto-save after 2 seconds of inactivity
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      handleAutoSave();
+    }, 2000);
+  }, [validationErrors]);
+
+  // Handle array input changes (for emails and phones)
+  const handleArrayInputChange = useCallback((field: 'businessEmails' | 'businessPhones', index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: prev[field].map((item, i) => i === index ? value : item)
+    }));
+    setTouchedFields(prev => new Set([...prev, field]));
+    
+    // Clear error for this field
+    if (validationErrors[field]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+
+    // Mark as having unsaved changes
+    setAutoSaveState(prev => ({ ...prev, hasUnsavedChanges: true }));
+
+    // Auto-save after 2 seconds of inactivity
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      handleAutoSave();
+    }, 2000);
+  }, [validationErrors]);
+
+  // Add new email/phone input
+  const addArrayInput = useCallback((field: 'businessEmails' | 'businessPhones') => {
+    if (formData[field].length < 3) {
+      setFormData(prev => ({
+        ...prev,
+        [field]: [...prev[field], '']
+      }));
+    }
+  }, [formData]);
+
+  // Remove email/phone input
+  const removeArrayInput = useCallback((field: 'businessEmails' | 'businessPhones', index: number) => {
+    if (formData[field].length > 1) {
+      setFormData(prev => ({
+        ...prev,
+        [field]: prev[field].filter((_, i) => i !== index)
+      }));
+    }
+  }, [formData]);
+
+  // Auto-save functionality
+  const handleAutoSave = useCallback(async () => {
+    if (!autoSaveState.hasUnsavedChanges) return;
+
+    setAutoSaveState(prev => ({ ...prev, isAutoSaving: true }));
+    setLoadingState(prev => ({ ...prev, saving: true }));
+
+    try {
+      // Simulate API call for auto-save
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setAutoSaveState(prev => ({
+        ...prev,
+        hasUnsavedChanges: false,
+        isAutoSaving: false,
+        lastSaved: new Date()
+      }));
+
+      addNotification({
+        title: 'Draft Saved',
+        message: 'Your progress has been automatically saved.',
+        type: 'success',
+        isRead: false
+      });
+    } catch (error) {
+      addNotification({
+        title: 'Auto-save Failed',
+        message: 'Failed to save your progress. Please try again.',
+        type: 'error',
+        isRead: false
+      });
+    } finally {
+      setLoadingState(prev => ({ ...prev, saving: false }));
+    }
+  }, [autoSaveState.hasUnsavedChanges, addNotification]);
+
+  // Enhanced submit handler
+  const handleSubmit = useCallback(async () => {
+    if (!validateForm()) {
+      addNotification({
+        title: 'Validation Error',
+        message: 'Please fix all validation errors before submitting.',
+        type: 'error',
+        isRead: false
+      });
+      return;
+    }
+
+    setLoadingState(prev => ({ ...prev, submitting: true }));
+
+    try {
     // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
     addNotification({
-      title: 'Business Onboarded!',
-      message: `${formData.businessName} has been successfully onboarded.`,
-      type: 'success',
-      isRead: false
+        title: 'Business Onboarded Successfully!',
+        message: `${formData.brandName} has been successfully onboarded and is ready to use.`,
+        type: 'success',
+        isRead: false
     });
 
     // Reset form
     setFormData({
-      businessName: '',
-      industry: '',
-      businessType: '',
-      businessSize: '',
+        brandName: '',
+        businessType: '',
       website: '',
-      description: '',
-      contactPerson: '',
-      contactEmail: '',
-      contactPhone: '',
-      alternateEmail: '',
-      alternatePhone: '',
-      streetAddress: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      country: '',
-      timezone: '',
-      registrationNumber: '',
-      taxId: '',
-      businessLicense: '',
-      incorporationDate: '',
-      legalStructure: '',
-      posSystem: '',
-      accountingSoftware: '',
-      paymentProcessor: '',
-      bankName: '',
-      accountNumber: '',
-      routingNumber: '',
-      pocName: '',
-      pocTitle: '',
-      pocEmail: '',
-      pocPhone: '',
-      pocDepartment: '',
-      pocNotes: ''
-    });
-    setActiveTab('basic-info');
+        description: '',
+        businessEmails: [''],
+        businessPhones: [''],
+        streetAddress: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: '',
+        gstNumber: '',
+        panNumber: '',
+        businessRegistrationNumber: '',
+        posSystem: '',
+        posProvider: '',
+        posVersion: '',
+        terminalId: '',
+        serialNumber: '',
+        installationDate: '',
+        licenseKey: '',
+        pocName: '',
+        pocEmail: '',
+        pocPhone: '',
+        pocDesignation: ''
+      });
+      
+      setActiveTab('basic-info');
+      setValidationErrors({});
+      setTouchedFields(new Set());
+      setAutoSaveState({
+        lastSaved: null,
+        hasUnsavedChanges: false,
+        isAutoSaving: false
+      });
+      
+      // Redirect to businesses page
+      router.push('/businesses');
+    } catch (error) {
+      addNotification({
+        title: 'Submission Failed',
+        message: 'Failed to submit the form. Please try again.',
+        type: 'error',
+        isRead: false
+      });
+    } finally {
+      setLoadingState(prev => ({ ...prev, submitting: false }));
+      setShowSubmitDialog(false);
+    }
+  }, [formData, validateForm, addNotification, router]);
+
+  // Handle exit with unsaved changes
+  const handleExit = useCallback(() => {
+    if (autoSaveState.hasUnsavedChanges) {
+      setShowExitDialog(true);
+    } else {
+      router.back();
+    }
+  }, [autoSaveState.hasUnsavedChanges, router]);
+
+  // Confirm exit
+  const confirmExit = useCallback(() => {
+    setShowExitDialog(false);
+    router.back();
+  }, [router]);
+
+  // Confirm submit
+  const confirmSubmit = useCallback(() => {
+    setShowSubmitDialog(true);
+  }, []);
+
+  // Cancel submit
+  const cancelSubmit = useCallback(() => {
+    setShowSubmitDialog(false);
+  }, []);
+
+  // Form validation on mount and data change
+  useEffect(() => {
+    validateForm();
+  }, [formData, validateForm]);
+
+  // Cleanup auto-save timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Auto-save on page unload
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (autoSaveState.hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [autoSaveState.hasUnsavedChanges]);
+
+  // Helper function to render input with validation
+  const renderInput = (field: string, label: string, type: string = 'text', placeholder: string = '', required: boolean = false, icon?: React.ReactNode) => {
+    const hasError = validationErrors[field];
+    const isTouched = touchedFields.has(field);
+    
+        return (
+            <div>
+        <Label htmlFor={field} className="mb-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </Label>
+              <div className="relative">
+          {icon && (
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground">
+              {icon}
+            </div>
+          )}
+              <Input
+            id={field}
+            type={type}
+            value={typeof formData[field as keyof FormData] === 'string' ? formData[field as keyof FormData] as string : ''}
+            onChange={(e) => handleInputChange(field, e.target.value)}
+            placeholder={placeholder}
+            className={`${icon ? 'pl-10' : ''} ${hasError && isTouched ? 'border-red-500 focus:border-red-500' : ''}`}
+              />
+            </div>
+        {hasError && isTouched && (
+          <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+            <AlertCircle className="h-3 w-3" />
+            {hasError}
+          </p>
+        )}
+          </div>
+        );
+  };
+
+  // Helper function to render textarea with validation
+  const renderTextarea = (field: string, label: string, placeholder: string = '', required: boolean = false, maxLength?: number) => {
+    const hasError = validationErrors[field];
+    const isTouched = touchedFields.has(field);
+    
+        return (
+            <div>
+        <Label htmlFor={field} className="mb-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </Label>
+        <Textarea
+          id={field}
+          value={typeof formData[field as keyof FormData] === 'string' ? formData[field as keyof FormData] as string : ''}
+          onChange={(e) => handleInputChange(field, e.target.value)}
+          placeholder={placeholder}
+          className={`${hasError && isTouched ? 'border-red-500 focus:border-red-500' : ''}`}
+          maxLength={maxLength}
+        />
+        {maxLength && (
+          <p className="text-xs text-gray-500 mt-1">
+            {typeof formData[field as keyof FormData] === 'string' ? (formData[field as keyof FormData] as string).length : 0}/{maxLength} characters
+          </p>
+        )}
+        {hasError && isTouched && (
+          <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+            <AlertCircle className="h-3 w-3" />
+            {hasError}
+          </p>
+        )}
+            </div>
+    );
+  };
+
+  // Helper function to render select with validation
+  const renderSelect = (field: string, label: string, options: string[], placeholder: string = '', required: boolean = false) => {
+    const hasError = validationErrors[field];
+    const isTouched = touchedFields.has(field);
+    
+    return (
+            <div>
+        <Label htmlFor={field} className="mb-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </Label>
+        <Select 
+          value={typeof formData[field as keyof FormData] === 'string' ? formData[field as keyof FormData] as string : ''} 
+          onValueChange={(value) => handleInputChange(field, value)}
+        >
+          <SelectTrigger className={hasError && isTouched ? 'border-red-500 focus:border-red-500' : ''}>
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map(option => (
+              <SelectItem key={option} value={option}>{option}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {hasError && isTouched && (
+          <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+            <AlertCircle className="h-3 w-3" />
+            {hasError}
+          </p>
+        )}
+            </div>
+    );
   };
 
   const renderTabContent = () => {
@@ -241,161 +764,115 @@ export default function BusinessOnboardingPage() {
       case 'basic-info':
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label htmlFor="businessName" className="mb-0.5">Business Name *</Label>
-                <Input
-                  id="businessName"
-                  value={formData.businessName}
-                  onChange={(e) => handleInputChange('businessName', e.target.value)}
-                  placeholder="Enter business name"
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              {renderInput('brandName', 'Brand Name', 'text', 'Enter brand name', true)}
+              {renderSelect('businessType', 'Business Type', businessTypes, 'Select business type', true)}
+              {renderInput('website', 'Website', 'url', 'https://example.com', false, <Globe className="h-4 w-4" />)}
               </div>
-
-              <div>
-                <Label htmlFor="industry" className="mb-0.5">Industry *</Label>
-                <Select value={formData.industry} onValueChange={(value) => handleInputChange('industry', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select industry" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {industries.map(industry => (
-                      <SelectItem key={industry} value={industry}>{industry}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="businessType" className="mb-0.5">Business Type *</Label>
-                <Select value={formData.businessType} onValueChange={(value) => handleInputChange('businessType', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select business type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {businessTypes.map(type => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="businessSize" className="mb-0.5">Business Size</Label>
-                <Select value={formData.businessSize} onValueChange={(value) => handleInputChange('businessSize', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select business size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {businessSizes.map(size => (
-                      <SelectItem key={size} value={size}>{size}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="website" className="mb-0.5">Website</Label>
-                <div className="relative">
-                  <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="website"
-                    value={formData.website}
-                    onChange={(e) => handleInputChange('website', e.target.value)}
-                    placeholder="https://example.com"
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="description" className="mb-0.5">Business Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                placeholder="Brief description of your business..."
-                className="min-h-[100px]"
-              />
-            </div>
+            {renderTextarea('description', 'Business Description', 'Brief description of your business...', false, 500)}
           </div>
         );
 
       case 'contact-info':
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label htmlFor="contactPerson" className="mb-0.5">Contact Person *</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="contactPerson"
-                    value={formData.contactPerson}
-                    onChange={(e) => handleInputChange('contactPerson', e.target.value)}
-                    placeholder="Full name"
-                    className="pl-10"
-                  />
-                </div>
+            {/* Business Emails */}
+            <div>
+              <Label className="mb-4 block">
+                Business Email IDs <span className="text-red-500">*</span>
+              </Label>
+              <div className="space-y-3">
+                {formData.businessEmails.map((email, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="flex-1">
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="email"
+                          value={email}
+                          onChange={(e) => handleArrayInputChange('businessEmails', index, e.target.value)}
+                          placeholder="business@example.com"
+                          className={`pl-10 ${validationErrors.businessEmails && touchedFields.has('businessEmails') ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                      </div>
+                      {validationErrors.businessEmails && touchedFields.has('businessEmails') && index === 0 && (
+                        <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          {validationErrors.businessEmails}
+                        </p>
+                      )}
+                    </div>
+                    {formData.businessEmails.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeArrayInput('businessEmails', index)}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {formData.businessEmails.length < 3 && (
+                  <button
+                    type="button"
+                    onClick={() => addArrayInput('businessEmails')}
+                    className="flex items-center gap-2 text-[#6E4EFF] hover:text-[#7856FF] transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="text-sm font-medium">Add another email</span>
+                  </button>
+                )}
               </div>
+            </div>
 
-              <div>
-                <Label htmlFor="contactEmail" className="mb-0.5">Primary Email *</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="contactEmail"
-                    type="email"
-                    value={formData.contactEmail}
-                    onChange={(e) => handleInputChange('contactEmail', e.target.value)}
-                    placeholder="contact@business.com"
-                    className="pl-10"
-                  />
-                </div>
+            {/* Business Phones */}
+            <div>
+              <Label className="mb-4 block">
+                Business Phone Numbers <span className="text-red-500">*</span>
+              </Label>
+              <div className="space-y-3">
+                {formData.businessPhones.map((phone, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="flex-1">
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => handleArrayInputChange('businessPhones', index, e.target.value)}
+                          placeholder="+91 98765 43210"
+                          className={`pl-10 ${validationErrors.businessPhones && touchedFields.has('businessPhones') ? 'border-red-500 focus:border-red-500' : ''}`}
+                />
               </div>
-
-              <div>
-                <Label htmlFor="contactPhone" className="mb-0.5">Primary Phone *</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="contactPhone"
-                    value={formData.contactPhone}
-                    onChange={(e) => handleInputChange('contactPhone', e.target.value)}
-                    placeholder="+1 (555) 123-4567"
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="alternateEmail" className="mb-0.5">Alternate Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="alternateEmail"
-                    type="email"
-                    value={formData.alternateEmail}
-                    onChange={(e) => handleInputChange('alternateEmail', e.target.value)}
-                    placeholder="alternate@business.com"
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="alternatePhone" className="mb-0.5">Alternate Phone</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="alternatePhone"
-                    value={formData.alternatePhone}
-                    onChange={(e) => handleInputChange('alternatePhone', e.target.value)}
-                    placeholder="+1 (555) 987-6543"
-                    className="pl-10"
-                  />
-                </div>
+                      {validationErrors.businessPhones && touchedFields.has('businessPhones') && index === 0 && (
+                        <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          {validationErrors.businessPhones}
+                        </p>
+                      )}
+            </div>
+                    {formData.businessPhones.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeArrayInput('businessPhones', index)}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {formData.businessPhones.length < 3 && (
+                  <button
+                    type="button"
+                    onClick={() => addArrayInput('businessPhones')}
+                    className="flex items-center gap-2 text-[#6E4EFF] hover:text-[#7856FF] transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="text-sm font-medium">Add another phone</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -404,137 +881,23 @@ export default function BusinessOnboardingPage() {
       case 'business-address':
         return (
           <div className="space-y-6">
-            <div>
-              <Label htmlFor="streetAddress" className="mb-0.5">Street Address *</Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="streetAddress"
-                  value={formData.streetAddress}
-                  onChange={(e) => handleInputChange('streetAddress', e.target.value)}
-                  placeholder="123 Business Street"
-                  className="pl-10"
-                />
+            {renderTextarea('streetAddress', 'Street Address', 'Enter complete street address', true)}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {renderInput('city', 'City', 'text', 'City', true)}
+              {renderInput('state', 'State', 'text', 'State', true)}
+              {renderInput('zipCode', 'ZIP Code', 'text', '12345', true)}
+                      </div>
+            {renderSelect('country', 'Country', countries, 'Select country', true)}
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <Label htmlFor="city" className="mb-0.5">City *</Label>
-                <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => handleInputChange('city', e.target.value)}
-                  placeholder="City"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="state" className="mb-0.5">State/Province *</Label>
-                <Input
-                  id="state"
-                  value={formData.state}
-                  onChange={(e) => handleInputChange('state', e.target.value)}
-                  placeholder="State"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="zipCode" className="mb-0.5">ZIP/Postal Code *</Label>
-                <Input
-                  id="zipCode"
-                  value={formData.zipCode}
-                  onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                  placeholder="12345"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label htmlFor="country" className="mb-0.5">Country</Label>
-                <Input
-                  id="country"
-                  value={formData.country}
-                  onChange={(e) => handleInputChange('country', e.target.value)}
-                  placeholder="Country"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="timezone" className="mb-0.5">Timezone</Label>
-                <Select value={formData.timezone} onValueChange={(value) => handleInputChange('timezone', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select timezone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timezones.map(timezone => (
-                      <SelectItem key={timezone} value={timezone}>{timezone}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
         );
 
       case 'business-registration':
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label htmlFor="registrationNumber" className="mb-0.5">Registration Number *</Label>
-                <Input
-                  id="registrationNumber"
-                  value={formData.registrationNumber}
-                  onChange={(e) => handleInputChange('registrationNumber', e.target.value)}
-                  placeholder="Business registration number"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="taxId" className="mb-0.5">Tax ID/EIN *</Label>
-                <Input
-                  id="taxId"
-                  value={formData.taxId}
-                  onChange={(e) => handleInputChange('taxId', e.target.value)}
-                  placeholder="Tax identification number"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="businessLicense" className="mb-0.5">Business License</Label>
-                <Input
-                  id="businessLicense"
-                  value={formData.businessLicense}
-                  onChange={(e) => handleInputChange('businessLicense', e.target.value)}
-                  placeholder="Business license number"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="incorporationDate" className="mb-0.5">Incorporation Date</Label>
-                <Input
-                  id="incorporationDate"
-                  type="date"
-                  value={formData.incorporationDate}
-                  onChange={(e) => handleInputChange('incorporationDate', e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="legalStructure" className="mb-0.5">Legal Structure *</Label>
-                <Select value={formData.legalStructure} onValueChange={(value) => handleInputChange('legalStructure', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select legal structure" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {legalStructures.map(structure => (
-                      <SelectItem key={structure} value={structure}>{structure}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              {renderInput('gstNumber', 'GST Number', 'text', '22AAAAA0000A1Z5', false)}
+              {renderInput('panNumber', 'PAN Number', 'text', 'AAAAA0000A', false)}
+              {renderInput('businessRegistrationNumber', 'Business Registration Number', 'text', 'Business registration number', false)}
             </div>
           </div>
         );
@@ -542,159 +905,73 @@ export default function BusinessOnboardingPage() {
       case 'pos-accounting':
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label htmlFor="posSystem" className="mb-0.5">POS System *</Label>
-                <Select value={formData.posSystem} onValueChange={(value) => handleInputChange('posSystem', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select POS system" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {posSystems.map(system => (
-                      <SelectItem key={system} value={system}>{system}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="accountingSoftware" className="mb-0.5">Accounting Software *</Label>
-                <Select value={formData.accountingSoftware} onValueChange={(value) => handleInputChange('accountingSoftware', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select accounting software" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accountingSoftware.map(software => (
-                      <SelectItem key={software} value={software}>{software}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="paymentProcessor" className="mb-0.5">Payment Processor *</Label>
-                <Select value={formData.paymentProcessor} onValueChange={(value) => handleInputChange('paymentProcessor', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select payment processor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {paymentProcessors.map(processor => (
-                      <SelectItem key={processor} value={processor}>{processor}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="bankName" className="mb-0.5">Bank Name</Label>
-                <Input
-                  id="bankName"
-                  value={formData.bankName}
-                  onChange={(e) => handleInputChange('bankName', e.target.value)}
-                  placeholder="Bank name"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="accountNumber" className="mb-0.5">Account Number</Label>
-                <Input
-                  id="accountNumber"
-                  value={formData.accountNumber}
-                  onChange={(e) => handleInputChange('accountNumber', e.target.value)}
-                  placeholder="Account number"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="routingNumber" className="mb-0.5">Routing Number</Label>
-                <Input
-                  id="routingNumber"
-                  value={formData.routingNumber}
-                  onChange={(e) => handleInputChange('routingNumber', e.target.value)}
-                  placeholder="Routing number"
-                />
-              </div>
-            </div>
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              {renderSelect('posSystem', 'POS System', posSystems, 'Select POS system', false)}
+              {renderInput('posProvider', 'POS Provider', 'text', 'POS provider name', false)}
+              {renderInput('posVersion', 'Version', 'text', 'Version number', false)}
+              {renderInput('terminalId', 'Terminal ID', 'text', 'Terminal ID', false)}
+              {renderInput('serialNumber', 'Serial Number', 'text', 'Serial number', false)}
+              {renderInput('installationDate', 'Installation Date', 'date', '', false)}
+                      </div>
+            {renderInput('licenseKey', 'License Key', 'text', 'License key', false)}
+                      </div>
         );
 
       case 'primary-poc':
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label htmlFor="pocName" className="mb-0.5">POC Name *</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="pocName"
-                    value={formData.pocName}
-                    onChange={(e) => handleInputChange('pocName', e.target.value)}
-                    placeholder="Full name"
-                    className="pl-10"
-                  />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              {renderInput('pocName', 'POC Name', 'text', 'Full name', true, <User className="h-4 w-4" />)}
+              {renderInput('pocEmail', 'POC Email', 'email', 'poc@business.com', true, <Mail className="h-4 w-4" />)}
+              {renderInput('pocPhone', 'POC Phone', 'tel', '+91 98765 43210', true, <Phone className="h-4 w-4" />)}
+              {renderInput('pocDesignation', 'POC Designation', 'text', 'Job designation', true)}
+            </div>
+          </div>
+        );
+
+      case 'agreements-welcome':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <Card className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <FileText className="h-6 w-6 text-blue-600" />
+                  <h4 className="text-lg font-semibold">Service Agreement</h4>
                 </div>
-              </div>
+                <p className="text-gray-600 mb-4">
+                  Send the service agreement document to the business contact for review and signature.
+                </p>
+                <Button className="w-full">
+                  <Send className="h-4 w-4 mr-2" />
+                  Send Agreement
+                </Button>
+              </Card>
 
-              <div>
-                <Label htmlFor="pocTitle" className="mb-0.5">Title/Position</Label>
-                <Input
-                  id="pocTitle"
-                  value={formData.pocTitle}
-                  onChange={(e) => handleInputChange('pocTitle', e.target.value)}
-                  placeholder="Job title"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="pocEmail" className="mb-0.5">Email *</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="pocEmail"
-                    type="email"
-                    value={formData.pocEmail}
-                    onChange={(e) => handleInputChange('pocEmail', e.target.value)}
-                    placeholder="poc@business.com"
-                    className="pl-10"
-                  />
+              <Card className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <FileCheck className="h-6 w-6 text-green-600" />
+                  <h4 className="text-lg font-semibold">Welcome Kit</h4>
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="pocPhone" className="mb-0.5">Phone *</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="pocPhone"
-                    value={formData.pocPhone}
-                    onChange={(e) => handleInputChange('pocPhone', e.target.value)}
-                    placeholder="+1 (555) 123-4567"
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="pocDepartment" className="mb-0.5">Department</Label>
-                <Input
-                  id="pocDepartment"
-                  value={formData.pocDepartment}
-                  onChange={(e) => handleInputChange('pocDepartment', e.target.value)}
-                  placeholder="Department"
-                />
-              </div>
+                <p className="text-gray-600 mb-4">
+                  Send the comprehensive welcome kit with setup instructions and resources.
+                </p>
+                <Button className="w-full" variant="outline">
+                  <Send className="h-4 w-4 mr-2" />
+                  Send Welcome Kit
+                </Button>
+              </Card>
             </div>
 
-            <div>
-              <Label htmlFor="pocNotes" className="mb-0.5">Additional Notes</Label>
-              <Textarea
-                id="pocNotes"
-                value={formData.pocNotes}
-                onChange={(e) => handleInputChange('pocNotes', e.target.value)}
-                placeholder="Any additional notes about the primary point of contact..."
-                className="min-h-[100px]"
-              />
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-blue-900 mb-1">Next Steps</h4>
+                  <p className="text-blue-800 text-sm">
+                    Once both documents are sent, the business will be able to review, sign, and complete their onboarding process.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -703,6 +980,23 @@ export default function BusinessOnboardingPage() {
         return null;
     }
   };
+
+  // Show loading state while auth is being checked
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#f6f6f6] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-[#6E4EFF]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Loader2 className="h-8 w-8 text-[#6E4EFF] animate-spin" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading...</h2>
+          <p className="text-gray-600">
+            Please wait while we verify your access.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!hasRole('manager')) {
     return (
@@ -732,12 +1026,12 @@ export default function BusinessOnboardingPage() {
     if (currentIndex < tabs.length - 1) {
       setActiveTab(tabs[currentIndex + 1].id);
     } else {
-      handleSubmit();
+      confirmSubmit();
     }
   };
 
   return (
-    <div className="bg-[#f6f6f6] relative size-full min-h-screen p-4 lg:p-6 overflow-hidden">
+    <div className="bg-[#f6f6f6] relative size-full min-h-screen p-4 sm:p-6 lg:p-8 overflow-hidden pb-20 lg:pb-8">
       <div className="max-w-7xl mx-auto w-full">
         {/* Header Section */}
         <div className="flex gap-[7px] items-start mb-12">
@@ -770,15 +1064,43 @@ export default function BusinessOnboardingPage() {
           </div>
         </div>
 
+
+        {/* Mobile Stepper Header */}
+        <div className="lg:hidden w-full mb-6">
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-[#6E4EFF] rounded-full flex items-center justify-center text-white font-bold text-lg">
+                {tabs.findIndex(tab => tab.id === activeTab) + 1}
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">
+                  {tabs.find(tab => tab.id === activeTab)?.title}
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Step {tabs.findIndex(tab => tab.id === activeTab) + 1} of {tabs.length} • 2-3 min
+                </p>
+              </div>
+                  </div>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-[#6E4EFF] h-2 rounded-full transition-all duration-300"
+                style={{ width: `${((tabs.findIndex(tab => tab.id === activeTab) + 1) / tabs.length) * 100}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+
         {/* Main Content Area */}
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-[55px] items-start w-full relative">
-          {/* Left Sidebar - Tab Navigation */}
-          <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full lg:w-[320px] max-h-[60vh] lg:max-h-none overflow-y-auto lg:overflow-visible">
+          {/* Left Sidebar - Tab Navigation (Desktop Only) */}
+          <div className="hidden lg:flex flex-col gap-[8px] items-start relative shrink-0 w-[320px] max-h-[60vh] lg:max-h-none overflow-y-auto lg:overflow-visible">
             {tabs.map((tab) => (
               <div
                 key={tab.id}
-                className={`bg-white relative rounded-[4px] shrink-0 w-full lg:w-[299px] cursor-pointer transition-all min-h-[76px] ${
-                  activeTab === tab.id ? 'ring-2 ring-blue-500 shadow-md' : 'hover:shadow-sm'
+                className={`bg-white relative rounded-[4px] shrink-0 w-[299px] cursor-pointer transition-all min-h-[76px] ${
+                  activeTab === tab.id ? 'ring-2 ring-[#6E4EFF] shadow-md' : 'hover:shadow-sm'
                 }`}
                 onClick={() => setActiveTab(tab.id)}
               >
@@ -786,16 +1108,16 @@ export default function BusinessOnboardingPage() {
                   <div className="flex gap-[12px] items-center flex-1 min-w-0">
                     <div className={`relative shrink-0 size-[40px] rounded-full flex items-center justify-center ${
                       tab.completed
-                        ? 'bg-green-100 text-green-600'
+                        ? 'bg-[#17C653]/10 text-[#17C653]'
                         : activeTab === tab.id
                           ? 'bg-blue-100 text-blue-600'
                           : 'bg-gray-100 text-gray-600'
                     }`}>
                       {tab.completed ? (
-                        <CheckCircle className="h-5 w-5" />
-                      ) : (
+                      <CheckCircle className="h-5 w-5" />
+                    ) : (
                         <tab.icon className="h-5 w-5" />
-                      )}
+                    )}
                     </div>
                     <div className="flex flex-col font-normal grow justify-center leading-[0] min-w-0 text-[#2a2a2f] text-[14px]">
                       <p className="leading-[1.4] font-bold">{tab.title}</p>
@@ -807,22 +1129,23 @@ export default function BusinessOnboardingPage() {
                   </div>
                 </div>
                 <div aria-hidden="true" className="absolute border border-[#e9e9e9] border-solid inset-0 pointer-events-none rounded-[4px]" />
-              </div>
-            ))}
-          </div>
+                </div>
+              ))}
+                  </div>
 
           {/* Right Content Area */}
-          <div className="bg-white rounded-lg p-4 lg:p-8 flex-1 min-h-[381px] shadow-sm w-full lg:ml-0">
-            <div className="mb-6">
+          <div className="bg-white rounded-lg p-4 sm:p-6 lg:p-8 flex-1 min-h-[381px] shadow-sm w-full lg:ml-0">
+            {/* Desktop Header (Hidden on Mobile) */}
+            <div className="hidden lg:block mb-6">
               <div className="flex items-start gap-3 mb-0">
-                {(() => {
+              {(() => {
                   const activeTabData = tabs.find(tab => tab.id === activeTab);
                   return activeTabData ? (
                     <>
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center mt-1 ${
                         activeTabData.completed
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-blue-100 text-blue-600'
+                          ? 'bg-[#17C653]/10 text-[#17C653]'
+                          : 'bg-[#7856FF]/10 text-[#7856FF]'
                       }`}>
                         {activeTabData.completed ? (
                           <CheckCircle className="h-5 w-5" />
@@ -840,39 +1163,187 @@ export default function BusinessOnboardingPage() {
                       </div>
                     </>
                   ) : null;
-                })()}
+              })()}
               </div>
-            </div>
-            
+                  </div>
+
             {renderTabContent()}
             
-            {/* Navigation Buttons */}
-            <div className="flex justify-between mt-8">
-              {/* Back Button - Only show from second tab onwards */}
-              {tabs.findIndex(tab => tab.id === activeTab) > 0 && (
-                <button
-                  onClick={handleTabBack}
-                  className="bg-gray-100 box-border flex gap-[8px] h-[48px] items-center justify-center px-[16px] py-[12px] rounded-[4px] w-[120px] hover:bg-gray-200 transition-colors border border-gray-300"
-                >
-                  <ArrowLeft className="h-4 w-4 text-gray-600" />
-                  <span className="text-gray-700 font-medium">Back</span>
-                </button>
-              )}
-              
-              {/* Next Button */}
-              <button
-                onClick={handleNext}
-                className="bg-[#6e4eff] box-border flex gap-[8px] h-[48px] items-center justify-center px-[16px] py-[12px] rounded-[4px] w-[218px] hover:bg-[#5a3fd9] transition-colors ml-auto"
-              >
-                <div className="flex flex-col font-semibold justify-center leading-[0] relative shrink-0 text-[16px] text-nowrap text-white">
-                  <p className="leading-[24px] whitespace-pre">
-                    {tabs.findIndex(tab => tab.id === activeTab) === tabs.length - 1 ? 'Create Account' : 'Next'}
-                  </p>
+            {/* Navigation Buttons - Hide for Documents & Welcome Kit tab and Mobile */}
+            {activeTab !== 'agreements-welcome' && (
+              <div className="hidden lg:flex flex-col sm:flex-row gap-4 mt-8">
+                {/* Back Button - Only show from second tab onwards */}
+                {tabs.findIndex(tab => tab.id === activeTab) > 0 && (
+                  <button
+                    onClick={handleTabBack}
+                    className="bg-gray-100 box-border flex gap-[8px] h-[48px] items-center justify-center px-[16px] py-[12px] rounded-[4px] w-full sm:w-[120px] hover:bg-gray-200 transition-colors border border-gray-300"
+                  >
+                    <ArrowLeft className="h-4 w-4 text-gray-600" />
+                    <span className="text-gray-700 font-medium">Back</span>
+                  </button>
+                )}
+                
+                {/* Auto-save Status */}
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="flex items-center gap-2">
+                    {autoSaveState.isAutoSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 text-[#6E4EFF] animate-spin" />
+                        <span className="text-sm text-gray-600">Saving...</span>
+                      </>
+                    ) : autoSaveState.lastSaved ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 text-[#17C653]" />
+                        <span className="text-sm text-gray-600">
+                          Last saved: {autoSaveState.lastSaved.toLocaleTimeString()}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        <span className="text-sm text-gray-600">No changes saved</span>
+                      </>
+                  )}
                 </div>
-              </button>
+                  {autoSaveState.hasUnsavedChanges && (
+                    <Badge variant="outline" className="text-amber-600 border-amber-200 ml-auto">
+                      Unsaved changes
+                    </Badge>
+                  )}
             </div>
+                
+                {/* Next Button */}
+                <button
+                  onClick={handleNext}
+                  disabled={loadingState.submitting || loadingState.validating}
+                  className="bg-[#6E4EFF] box-border flex gap-[8px] h-[48px] items-center justify-center px-[16px] py-[12px] rounded-[4px] w-full sm:w-[218px] hover:bg-[#7856FF] transition-colors sm:ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingState.submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-sm font-medium">Submitting...</span>
+                    </>
+                  ) : loadingState.validating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-sm font-medium">Validating...</span>
+                    </>
+                  ) : (
+                    <div className="flex flex-col font-semibold justify-center leading-[0] relative shrink-0 text-[16px] text-nowrap text-white">
+                      <p className="leading-[24px] whitespace-pre">
+                        {tabs.findIndex(tab => tab.id === activeTab) === tabs.length - 1 ? 'Create Account' : 'Next'}
+                      </p>
+                    </div>
+                  )}
+                </button>
+            </div>
+            )}
           </div>
         </div>
+
+        {/* Mobile Navigation - Bottom of Page */}
+        {activeTab !== 'agreements-welcome' && (
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
+            <div className="flex justify-between gap-4 max-w-7xl mx-auto">
+              <button
+                onClick={handleTabBack}
+                disabled={tabs.findIndex(tab => tab.id === activeTab) === 0}
+                className="flex items-center gap-2 px-6 py-3 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 rounded-lg"
+          >
+            <ArrowLeft className="h-4 w-4" />
+                <span className="text-sm font-medium">Previous</span>
+              </button>
+
+              <button
+              onClick={handleNext}
+                disabled={activeTab === 'agreements-welcome' || loadingState.submitting || loadingState.validating}
+                className="flex items-center gap-2 px-6 py-3 bg-[#6E4EFF] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex-1 justify-center hover:bg-[#7856FF] transition-colors"
+              >
+                {loadingState.submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm font-medium">Submitting...</span>
+                  </>
+                ) : loadingState.validating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm font-medium">Validating...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm font-medium">
+                      {tabs.findIndex(tab => tab.id === activeTab) === tabs.length - 1 ? 'Complete' : 'Next'}
+                    </span>
+              <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+        </div>
+          </div>
+        )}
+
+        {/* Exit Confirmation Dialog */}
+        <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                Unsaved Changes
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                You have unsaved changes that will be lost if you leave this page. 
+                Your progress has been automatically saved as a draft, but you may want to complete the form first.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setShowExitDialog(false)}>
+                Stay on Page
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={confirmExit} className="bg-red-600 hover:bg-red-700">
+                Leave Anyway
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Submit Confirmation Dialog */}
+        <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-[#17C653]" />
+                Confirm Submission
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to submit the business onboarding form? 
+                This will create the business account and send notifications to the team.
+                <br /><br />
+                <strong>Business:</strong> {formData.brandName || 'Unnamed Business'}
+                <br />
+                <strong>POC:</strong> {formData.pocName || 'Not specified'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={cancelSubmit}>
+                Review Again
+              </AlertDialogCancel>
+              <AlertDialogAction 
+              onClick={handleSubmit}
+                className="bg-[#6E4EFF] hover:bg-[#7856FF]"
+                disabled={loadingState.submitting}
+              >
+                {loadingState.submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit & Create Account'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
