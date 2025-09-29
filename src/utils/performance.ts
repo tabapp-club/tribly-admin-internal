@@ -6,7 +6,7 @@ interface PerformanceMetric {
   name: string;
   duration: number;
   timestamp: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 class PerformanceMonitor {
@@ -25,7 +25,7 @@ class PerformanceMonitor {
   }
 
   // End timing and record metric
-  endTiming(name: string, metadata?: Record<string, any>): number {
+  endTiming(name: string, metadata?: Record<string, unknown>): number {
     const startTime = this.timers.get(name);
     if (!startTime) {
       logger.warn(`No start time found for metric: ${name}`);
@@ -40,7 +40,7 @@ class PerformanceMonitor {
   }
 
   // Record a custom metric
-  recordMetric(name: string, duration: number, metadata?: Record<string, any>): void {
+  recordMetric(name: string, duration: number, metadata?: Record<string, unknown>): void {
     const metric: PerformanceMetric = {
       name,
       duration,
@@ -99,8 +99,8 @@ class PerformanceMonitor {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1];
         this.recordMetric('LCP', lastEntry.startTime, {
-          element: lastEntry.element?.tagName,
-          url: lastEntry.url,
+          element: (lastEntry as PerformanceEntry & { element?: Element }).element?.tagName,
+          url: (lastEntry as PerformanceEntry & { url?: string }).url,
         });
       });
       
@@ -114,7 +114,7 @@ class PerformanceMonitor {
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         entries.forEach((entry) => {
-          this.recordMetric('FID', entry.processingStart - entry.startTime, {
+          this.recordMetric('FID', (entry as PerformanceEntry & { processingStart: number }).processingStart - entry.startTime, {
             eventType: entry.name,
           });
         });
@@ -131,8 +131,8 @@ class PerformanceMonitor {
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         entries.forEach((entry) => {
-          if (!entry.hadRecentInput) {
-            clsValue += entry.value;
+          if (!(entry as PerformanceEntry & { hadRecentInput: boolean }).hadRecentInput) {
+            clsValue += (entry as PerformanceEntry & { value: number }).value;
           }
         });
         this.recordMetric('CLS', clsValue);
@@ -166,8 +166,8 @@ class PerformanceMonitor {
       resources.forEach((resource) => {
         this.recordMetric('Resource Load', resource.duration, {
           name: resource.name,
-          type: resource.initiatorType,
-          size: resource.transferSize,
+          type: (resource as PerformanceEntry & { initiatorType?: string }).initiatorType,
+          size: (resource as PerformanceEntry & { transferSize?: number }).transferSize,
         });
       });
     });
@@ -177,7 +177,7 @@ class PerformanceMonitor {
   monitorApiCall<T>(
     apiCall: () => Promise<T>,
     name: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<T> {
     this.startTiming(name);
     
@@ -200,8 +200,8 @@ class PerformanceMonitor {
   }
 
   // Get performance summary
-  getPerformanceSummary(): Record<string, any> {
-    const summary: Record<string, any> = {};
+  getPerformanceSummary(): Record<string, unknown> {
+    const summary: Record<string, unknown> = {};
     
     // Group metrics by name
     const groupedMetrics = this.metrics.reduce((acc, metric) => {
@@ -244,11 +244,11 @@ export function usePerformanceMonitor(componentName: string) {
     performanceMonitor.startTiming(`${componentName}_${metricName}`);
   };
 
-  const endTiming = (metricName: string, metadata?: Record<string, any>) => {
+  const endTiming = (metricName: string, metadata?: Record<string, unknown>) => {
     return performanceMonitor.endTiming(`${componentName}_${metricName}`, metadata);
   };
 
-  const recordMetric = (metricName: string, duration: number, metadata?: Record<string, any>) => {
+  const recordMetric = (metricName: string, duration: number, metadata?: Record<string, unknown>) => {
     performanceMonitor.recordMetric(`${componentName}_${metricName}`, duration, metadata);
   };
 

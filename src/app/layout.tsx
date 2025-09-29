@@ -17,8 +17,6 @@ export const metadata: Metadata = {
   title: "Tribly Admin Dashboard",
   description: "Modern admin dashboard for managing Tribly business platform",
   manifest: "/manifest.json",
-  themeColor: "#f6f6f6",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -38,6 +36,14 @@ export const metadata: Metadata = {
     shortcut: "/icons/icon-96x96.png",
     apple: "/icons/icon-152x152.png",
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#f6f6f6',
 };
 
 export default function RootLayout({

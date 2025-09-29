@@ -16,7 +16,7 @@ interface ApiOptions {
   errorMessage?: string;
 }
 
-export function useApi<T = any>(options: ApiOptions = {}) {
+export function useApi<T = unknown>(options: ApiOptions = {}) {
   const { addNotification } = useNotifications();
   const [state, setState] = useState<ApiState<T>>({
     data: null,

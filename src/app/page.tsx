@@ -1,26 +1,27 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import ProfileDropdown from '@/components/ui/ProfileDropdown';
 import {
   Building2,
-  Users,
   Coffee,
   UserPlus,
   BarChart3,
-  UserCheck,
-  Target,
-  TrendingUp,
-  DollarSign,
-  CheckCircle
+  UserCheck
 } from 'lucide-react';
 
 export default function Home() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   if (isLoading) {
     return (
@@ -31,11 +32,6 @@ export default function Home() {
         </div>
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    router.push('/login');
-    return null;
   }
 
 

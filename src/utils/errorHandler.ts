@@ -6,21 +6,21 @@ export interface AppError extends Error {
   code?: string;
   statusCode?: number;
   isOperational?: boolean;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 export class CustomError extends Error implements AppError {
   public readonly code?: string;
   public readonly statusCode?: number;
   public readonly isOperational: boolean;
-  public readonly context?: Record<string, any>;
+  public readonly context?: Record<string, unknown>;
 
   constructor(
     message: string,
     code?: string,
     statusCode: number = 500,
     isOperational: boolean = true,
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) {
     super(message);
     this.name = this.constructor.name;
@@ -35,7 +35,7 @@ export class CustomError extends Error implements AppError {
 
 // Predefined error types
 export class ValidationError extends CustomError {
-  constructor(message: string, context?: Record<string, any>) {
+  constructor(message: string, context?: Record<string, unknown>) {
     super(message, 'VALIDATION_ERROR', 400, true, context);
   }
 }
@@ -59,7 +59,7 @@ export class NotFoundError extends CustomError {
 }
 
 export class ConflictError extends CustomError {
-  constructor(message: string, context?: Record<string, any>) {
+  constructor(message: string, context?: Record<string, unknown>) {
     super(message, 'CONFLICT_ERROR', 409, true, context);
   }
 }
@@ -71,13 +71,13 @@ export class RateLimitError extends CustomError {
 }
 
 export class ServerError extends CustomError {
-  constructor(message: string = 'Internal server error', context?: Record<string, any>) {
+  constructor(message: string = 'Internal server error', context?: Record<string, unknown>) {
     super(message, 'SERVER_ERROR', 500, false, context);
   }
 }
 
 // Error handler for async functions
-export function asyncHandler<T extends any[], R>(
+export function asyncHandler<T extends unknown[], R>(
   fn: (...args: T) => Promise<R>
 ) {
   return async (...args: T): Promise<R> => {
@@ -90,7 +90,7 @@ export function asyncHandler<T extends any[], R>(
 }
 
 // Error handler for sync functions
-export function syncHandler<T extends any[], R>(
+export function syncHandler<T extends unknown[], R>(
   fn: (...args: T) => R
 ) {
   return (...args: T): R => {
@@ -189,7 +189,7 @@ export function setupGlobalErrorHandlers() {
 }
 
 // Error reporting to external service
-export async function reportError(error: AppError, context?: Record<string, any>) {
+export async function reportError(error: AppError, context?: Record<string, unknown>) {
   try {
     // In production, send to error reporting service
     if (process.env.NODE_ENV === 'production') {

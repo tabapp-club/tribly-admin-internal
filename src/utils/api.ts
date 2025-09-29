@@ -1,18 +1,23 @@
 // API configuration and utilities
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T;
   message?: string;
   success: boolean;
   errors?: string[];
 }
 
-export interface ApiError {
-  message: string;
+export class ApiError extends Error {
   status: number;
   errors?: string[];
+
+  constructor(message: string, status: number, errors?: string[]) {
+    super(message);
+    this.status = status;
+    this.errors = errors;
+  }
 }
 
 class ApiClient {
@@ -74,11 +79,11 @@ class ApiClient {
     return token && token.trim() !== '' ? token : null;
   }
 
-  async get<T>(endpoint: string, params?: Record<string, string>): Promise<ApiResponse<T>> {
+  async get<T>(endpoint: string, params?: Record<string, string | number>): Promise<ApiResponse<T>> {
     const url = new URL(`${this.baseURL}${endpoint}`);
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        url.searchParams.append(key, value);
+        url.searchParams.append(key, value.toString());
       });
     }
     
@@ -87,21 +92,21 @@ class ApiClient {
     });
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async post<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  async put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async put<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  async patch<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async patch<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
@@ -139,10 +144,10 @@ export const businessApi = {
   getById: (id: string) =>
     apiClient.get(`/businesses/${id}`),
   
-  create: (data: any) =>
+  create: (data: unknown) =>
     apiClient.post('/businesses', data),
   
-  update: (id: string, data: any) =>
+  update: (id: string, data: unknown) =>
     apiClient.put(`/businesses/${id}`, data),
   
   delete: (id: string) =>
@@ -156,10 +161,10 @@ export const teamApi = {
   getById: (id: string) =>
     apiClient.get(`/team/${id}`),
   
-  create: (data: any) =>
+  create: (data: unknown) =>
     apiClient.post('/team', data),
-  
-  update: (id: string, data: any) =>
+
+  update: (id: string, data: unknown) =>
     apiClient.put(`/team/${id}`, data),
   
   delete: (id: string) =>
@@ -170,7 +175,7 @@ export const settingsApi = {
   get: () =>
     apiClient.get('/settings'),
   
-  update: (data: any) =>
+  update: (data: unknown) =>
     apiClient.put('/settings', data),
 };
 

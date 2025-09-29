@@ -5,7 +5,7 @@ import { Notification } from '@/types'
 
 interface NotificationContextType {
   notifications: Notification[]
-  addNotification: (notification: Omit<Notification, 'id' | 'createdAt'>) => void
+  addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => void
   removeNotification: (id: string) => void
   markAsRead: (id: string) => void
   markAllAsRead: () => void
@@ -17,11 +17,12 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
 
-  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'createdAt'>) => {
+  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => {
     const newNotification: Notification = {
       ...notification,
       id: Math.random().toString(36).substr(2, 9),
       createdAt: new Date(),
+      isRead: false,
     }
 
     setNotifications(prev => [newNotification, ...prev])

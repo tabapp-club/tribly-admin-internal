@@ -167,11 +167,11 @@ export default function FeatureTogglesPage() {
 
   const handleToggleFeature = (featureId: string, enabled: boolean) => {
     // Simulate API call
-    addNotification({
-      title: enabled ? 'Feature Enabled' : 'Feature Disabled',
-      message: `Feature has been ${enabled ? 'enabled' : 'disabled'} for all businesses.`,
-      type: enabled ? 'success' : 'warning'
-    });
+      addNotification({
+        title: enabled ? 'Feature Enabled' : 'Feature Disabled',
+        message: `Feature has been ${enabled ? 'enabled' : 'disabled'} for all businesses.`,
+        type: enabled ? 'success' : 'warning'
+      });
   };
 
   const filteredFeatures = features.filter(feature => {

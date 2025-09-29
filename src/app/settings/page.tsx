@@ -30,7 +30,7 @@ interface TabItem {
   id: string;
   title: string;
   description: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
   completed: boolean;
 }
 
@@ -64,7 +64,8 @@ export default function SettingsPage() {
     twoFactorAuth: false,
     sessionTimeout: 30,
     passwordPolicy: 'strong',
-    ipWhitelist: false
+    ipWhitelist: false,
+    auditLogging: false
   });
 
   const tabs: TabItem[] = [

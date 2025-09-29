@@ -270,7 +270,7 @@ export function isValidIP(ip: string): boolean {
 }
 
 // Log security events
-export function logSecurityEvent(event: string, details: Record<string, any>): void {
+export function logSecurityEvent(event: string, details: Record<string, unknown>): void {
   logger.warn('Security Event', {
     event,
     timestamp: new Date().toISOString(),

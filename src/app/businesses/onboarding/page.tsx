@@ -35,8 +35,9 @@ import {
   Calendar,
   Clock,
   AlertCircle,
-  FileText,
   CreditCard,
+  ArrowLeft,
+  FileText,
   UserCheck,
   ChevronDown,
   Briefcase,
@@ -58,7 +59,7 @@ interface TabItem {
   id: string;
   title: string;
   description: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
   completed: boolean;
 }
 
@@ -107,15 +108,85 @@ interface AutoSaveState {
   isAutoSaving: boolean;
 }
 
+interface CreateUserBusinessResponse {
+  message?: string;
+  data?: {
+    user_id?: string;
+    business_id?: string;
+  };
+}
+
 // Validation functions
 const validateEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
 
+const defaultCountryCode = '+91';
+
+interface ParsedPhone {
+  countryCode: string;
+  subscriber: string;
+}
+
+const parsePhoneInput = (phone: string): ParsedPhone => {
+  const trimmed = phone.trim();
+  if (!trimmed) {
+    return { countryCode: defaultCountryCode, subscriber: '' };
+  }
+
+  const normalized = trimmed.replace(/\s+/g, '');
+  let countryCodePart = defaultCountryCode;
+  let subscriberPart = '';
+
+  const hyphenIndex = normalized.indexOf('-');
+  if (hyphenIndex !== -1) {
+    countryCodePart = normalized.slice(0, hyphenIndex);
+    subscriberPart = normalized.slice(hyphenIndex + 1);
+  } else {
+    const digitsOnly = normalized.replace(/\D/g, '');
+    if (normalized.startsWith('+') && digitsOnly.length > 0) {
+      if (digitsOnly.length > 10) {
+        countryCodePart = `+${digitsOnly.slice(0, digitsOnly.length - 10)}`;
+        subscriberPart = digitsOnly.slice(-10);
+      } else {
+        subscriberPart = digitsOnly;
+      }
+    } else {
+      subscriberPart = digitsOnly;
+    }
+  }
+
+  countryCodePart = countryCodePart.replace(/[^\d+]/g, '');
+  if (!countryCodePart.startsWith('+') && countryCodePart) {
+    countryCodePart = `+${countryCodePart.replace(/\D/g, '')}`;
+  }
+  if (!countryCodePart || countryCodePart === '+') {
+    countryCodePart = defaultCountryCode;
+  }
+
+  subscriberPart = subscriberPart.replace(/\D/g, '');
+
+  return { countryCode: countryCodePart, subscriber: subscriberPart };
+};
+
+const formatBusinessPhoneNumber = (phone: string): string | null => {
+  const { countryCode, subscriber } = parsePhoneInput(phone);
+  if (!subscriber) {
+    return null;
+  }
+
+  const normalizedCountryCode = countryCode.replace(/[^\d+]/g, '');
+  const finalCountryCode = normalizedCountryCode.startsWith('+')
+    ? normalizedCountryCode
+    : `+${normalizedCountryCode}`;
+
+  return `${finalCountryCode}${subscriber}`;
+};
+
 const validatePhone = (phone: string): boolean => {
-  const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
-  return phoneRegex.test(phone);
+  const { subscriber } = parsePhoneInput(phone);
+  return subscriber.length >= 6;
 };
 
 const validateURL = (url: string): boolean => {
@@ -127,14 +198,20 @@ const validateURL = (url: string): boolean => {
   }
 };
 
-const validateGST = (gst: string): boolean => {
-  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-  return gstRegex.test(gst);
+const ensureHttpProtocol = (url: string): string => {
+  if (!url) return '';
+  return url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
 };
 
-const validatePAN = (pan: string): boolean => {
-  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-  return panRegex.test(pan);
+const countryNameToCode: Record<string, string> = {
+  India: 'IN',
+  'United States': 'US',
+  'United Kingdom': 'GB',
+  Canada: 'CA',
+  Australia: 'AU',
+  Germany: 'DE',
+  France: 'FR',
+  Japan: 'JP',
 };
 
 export default function BusinessOnboardingPage() {
@@ -151,7 +228,7 @@ export default function BusinessOnboardingPage() {
 
     // Contact Information
     businessEmails: [''],
-    businessPhones: [''],
+    businessPhones: ['+91-'],
 
     // Business Address
     streetAddress: '',
@@ -177,7 +254,7 @@ export default function BusinessOnboardingPage() {
     // Primary POC Details
     pocName: '',
     pocEmail: '',
-    pocPhone: '',
+    pocPhone: '+91-',
     pocDesignation: ''
   });
 
@@ -194,11 +271,8 @@ export default function BusinessOnboardingPage() {
     isAutoSaving: false,
   });
   const [showExitDialog, setShowExitDialog] = useState(false);
-  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
-  const [isFormValid, setIsFormValid] = useState(false);
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const formRef = useRef<HTMLFormElement>(null);
 
   const tabs: TabItem[] = [
     {
@@ -213,7 +287,10 @@ export default function BusinessOnboardingPage() {
       title: 'Contact Information',
       description: 'Business emails and phone numbers',
       icon: Mail,
-      completed: !!(formData.businessEmails.some(email => email.trim()) && formData.businessPhones.some(phone => phone.trim()))
+      completed: !!(
+        formData.businessEmails.some(email => email.trim()) &&
+        formData.businessPhones.some(phone => validatePhone(phone))
+      )
     },
     {
       id: 'business-address',
@@ -227,21 +304,21 @@ export default function BusinessOnboardingPage() {
       title: 'Business registration',
       description: 'GST, PAN, and registration details',
       icon: FileCheck,
-      completed: !!(formData.gstNumber && formData.panNumber && formData.businessRegistrationNumber)
+      completed: !!(formData.gstNumber || formData.panNumber || formData.businessRegistrationNumber)
     },
     {
       id: 'pos-accounting',
       title: 'POS System Details',
       description: 'POS system and configuration',
       icon: Settings,
-      completed: !!(formData.posSystem && formData.posProvider && formData.terminalId)
+      completed: !!(formData.posSystem || formData.posProvider || formData.terminalId)
     },
     {
       id: 'primary-poc',
       title: 'Primary POC details',
       description: 'Main point of contact info',
       icon: UserCheck,
-      completed: !!(formData.pocName && formData.pocEmail && formData.pocPhone)
+      completed: !!(formData.pocName && formData.pocEmail && validatePhone(formData.pocPhone))
     },
     {
       id: 'agreements-welcome',
@@ -319,16 +396,6 @@ export default function BusinessOnboardingPage() {
         if (!value) return 'Country is required';
         return null;
       
-      case 'gstNumber':
-        if (typeof value !== 'string') return 'Invalid value type';
-        if (value && !validateGST(value)) return 'Please enter a valid GST number';
-        return null;
-      
-      case 'panNumber':
-        if (typeof value !== 'string') return 'Invalid value type';
-        if (value && !validatePAN(value)) return 'Please enter a valid PAN number';
-        return null;
-      
       case 'pocName':
         if (typeof value !== 'string') return 'Invalid value type';
         if (!value.trim()) return 'POC name is required';
@@ -363,7 +430,8 @@ export default function BusinessOnboardingPage() {
       
       case 'businessPhones':
         if (!Array.isArray(value)) return 'Invalid value type';
-        if (value.length === 0 || !value.some(phone => phone.trim())) return 'At least one business phone is required';
+        const hasValidBusinessPhone = value.some(phone => validatePhone(phone));
+        if (!hasValidBusinessPhone) return 'At least one business phone is required';
         for (const phone of value) {
           if (phone.trim() && !validatePhone(phone)) return 'Please enter a valid phone number';
         }
@@ -395,7 +463,7 @@ export default function BusinessOnboardingPage() {
     });
 
     // Optional fields validation
-    const optionalFields = ['website', 'description', 'gstNumber', 'panNumber'];
+    const optionalFields = ['website', 'description'];
     optionalFields.forEach(field => {
       const fieldValue = formData[field as keyof FormData];
       if (fieldValue) {
@@ -408,7 +476,6 @@ export default function BusinessOnboardingPage() {
     });
 
     setValidationErrors(errors);
-    setIsFormValid(isValid);
     return isValid;
   }, [formData, validateField]);
 
@@ -474,7 +541,7 @@ export default function BusinessOnboardingPage() {
     if (formData[field].length < 3) {
       setFormData(prev => ({
         ...prev,
-        [field]: [...prev[field], '']
+        [field]: [...prev[field], field === 'businessPhones' ? '+91-' : '']
       }));
     }
   }, [formData]);
@@ -507,19 +574,17 @@ export default function BusinessOnboardingPage() {
         lastSaved: new Date()
       }));
 
-      addNotification({
-        title: 'Draft Saved',
-        message: 'Your progress has been automatically saved.',
-        type: 'success',
-        isRead: false
-      });
-    } catch (error) {
-      addNotification({
-        title: 'Auto-save Failed',
-        message: 'Failed to save your progress. Please try again.',
-        type: 'error',
-        isRead: false
-      });
+        addNotification({
+          title: 'Draft Saved',
+          message: 'Your progress has been automatically saved.',
+          type: 'success'
+        });
+    } catch {
+        addNotification({
+          title: 'Auto-save Failed',
+          message: 'Failed to save your progress. Please try again.',
+          type: 'error'
+        });
     } finally {
       setLoadingState(prev => ({ ...prev, saving: false }));
     }
@@ -528,36 +593,126 @@ export default function BusinessOnboardingPage() {
   // Enhanced submit handler
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) {
-      addNotification({
-        title: 'Validation Error',
-        message: 'Please fix all validation errors before submitting.',
-        type: 'error',
-        isRead: false
-      });
+        addNotification({
+          title: 'Validation Error',
+          message: 'Please fill in all required fields.',
+          type: 'error'
+        });
       return;
     }
 
     setLoadingState(prev => ({ ...prev, submitting: true }));
 
     try {
-    // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-    addNotification({
-        title: 'Business Onboarded Successfully!',
-        message: `${formData.brandName} has been successfully onboarded and is ready to use.`,
-        type: 'success',
-        isRead: false
-    });
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
 
-    // Reset form
-    setFormData({
+      if (!token) {
+        throw new Error('Authentication token not found. Please sign in again.');
+      }
+
+      const primaryBusinessEmail = formData.businessEmails.find(email => email.trim())?.trim() || '';
+      const businessPhoneNumbers = formData.businessPhones
+        .map(formatBusinessPhoneNumber)
+        .filter((phone): phone is string => Boolean(phone));
+      const parsedPocPhone = parsePhoneInput(formData.pocPhone);
+      const pocPhoneNumber = parsedPocPhone.subscriber;
+      const pocCountryCode = parsedPocPhone.countryCode;
+      const formattedWebsite = ensureHttpProtocol(formData.website);
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+      if (!primaryBusinessEmail) {
+        throw new Error('At least one valid business email is required.');
+      }
+
+      if (!businessPhoneNumbers.length) {
+        throw new Error('At least one valid business phone number is required.');
+      }
+
+      if (!pocPhoneNumber) {
+        throw new Error('Primary POC phone number is required.');
+      }
+
+      const posPayload = {
+        pos_system: formData.posSystem || undefined,
+        pos_provider: formData.posProvider || undefined,
+        pos_version: formData.posVersion || undefined,
+        pos_terminal_id: formData.terminalId || undefined,
+        pos_serial_no: formData.serialNumber || undefined,
+        pos_date: formData.installationDate || undefined,
+        pos_license_key: formData.licenseKey || undefined,
+      };
+
+      const hasPosData = Object.values(posPayload).some(value => Boolean(value));
+
+      const payload = {
+        user: {
+          phone_number: pocPhoneNumber,
+          name: formData.pocName,
+          email: formData.pocEmail,
+          user_type: 'admin',
+          country_code: pocCountryCode,
+        },
+        business: {
+          name: formData.brandName,
+          business_type: formData.businessType ? formData.businessType.toUpperCase() : undefined,
+          website: formattedWebsite || undefined,
+          description: formData.description || undefined,
+          business_email_id: primaryBusinessEmail,
+          business_phone_numbers: businessPhoneNumbers,
+          street: formData.streetAddress,
+          city: formData.city,
+          state: formData.state,
+          zipcode: formData.zipCode,
+          country: countryNameToCode[formData.country] || formData.country,
+          gst: formData.gstNumber || undefined,
+          pan: formData.panNumber || undefined,
+          registration_number: formData.businessRegistrationNumber || undefined,
+          timezone,
+          industry: formData.businessType ? formData.businessType.toUpperCase() : undefined,
+        },
+        pos: hasPosData ? posPayload : undefined,
+      };
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+      const response = await fetch(`${baseUrl}/dashboard/v1/admin/create-user-business`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseBody = await response.json().catch(() => ({} as CreateUserBusinessResponse));
+
+      if (!response.ok) {
+        const errorMessage = responseBody?.message || 'Failed to onboard business. Please try again.';
+        throw new Error(errorMessage);
+      }
+
+      const successMessage = (() => {
+        const baseMessage = responseBody?.message || 'Business has been successfully onboarded.';
+        if (responseBody?.data?.business_id) {
+          return `${baseMessage} (Business ID: ${responseBody.data.business_id})`;
+        }
+        return baseMessage;
+      })();
+      
+        addNotification({
+          title: 'Business Onboarded!',
+          message: successMessage,
+          type: 'success'
+        });
+
+      // Reset form
+      setFormData({
         brandName: '',
         businessType: '',
-      website: '',
+        website: '',
         description: '',
         businessEmails: [''],
-        businessPhones: [''],
+        businessPhones: ['+91-'],
         streetAddress: '',
         city: '',
         state: '',
@@ -575,7 +730,7 @@ export default function BusinessOnboardingPage() {
         licenseKey: '',
         pocName: '',
         pocEmail: '',
-        pocPhone: '',
+        pocPhone: '+91-',
         pocDesignation: ''
       });
       
@@ -588,18 +743,17 @@ export default function BusinessOnboardingPage() {
         isAutoSaving: false
       });
       
-      // Redirect to businesses page
-      router.push('/businesses');
+      // Redirect to dashboard
+      router.push('/');
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to onboard business. Please try again.';
       addNotification({
-        title: 'Submission Failed',
-        message: 'Failed to submit the form. Please try again.',
-        type: 'error',
-        isRead: false
+        title: 'Onboarding Failed',
+        message: errorMessage,
+        type: 'error'
       });
     } finally {
       setLoadingState(prev => ({ ...prev, submitting: false }));
-      setShowSubmitDialog(false);
     }
   }, [formData, validateForm, addNotification, router]);
 
@@ -617,16 +771,6 @@ export default function BusinessOnboardingPage() {
     setShowExitDialog(false);
     router.back();
   }, [router]);
-
-  // Confirm submit
-  const confirmSubmit = useCallback(() => {
-    setShowSubmitDialog(true);
-  }, []);
-
-  // Cancel submit
-  const cancelSubmit = useCallback(() => {
-    setShowSubmitDialog(false);
-  }, []);
 
   // Form validation on mount and data change
   useEffect(() => {
@@ -839,7 +983,7 @@ export default function BusinessOnboardingPage() {
                           type="tel"
                           value={phone}
                           onChange={(e) => handleArrayInputChange('businessPhones', index, e.target.value)}
-                          placeholder="+91 98765 43210"
+                          placeholder="+91-98765 43210"
                           className={`pl-10 ${validationErrors.businessPhones && touchedFields.has('businessPhones') ? 'border-red-500 focus:border-red-500' : ''}`}
                 />
               </div>
@@ -921,7 +1065,7 @@ export default function BusinessOnboardingPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               {renderInput('pocName', 'POC Name', 'text', 'Full name', true, <User className="h-4 w-4" />)}
               {renderInput('pocEmail', 'POC Email', 'email', 'poc@business.com', true, <Mail className="h-4 w-4" />)}
-              {renderInput('pocPhone', 'POC Phone', 'tel', '+91 98765 43210', true, <Phone className="h-4 w-4" />)}
+              {renderInput('pocPhone', 'POC Phone', 'tel', '+91-98765 43210', true, <Phone className="h-4 w-4" />)}
               {renderInput('pocDesignation', 'POC Designation', 'text', 'Job designation', true)}
             </div>
           </div>
@@ -971,6 +1115,23 @@ export default function BusinessOnboardingPage() {
                 </div>
               </div>
             </div>
+
+            <div className="flex justify-end">
+              <Button
+                className="bg-[#6E4EFF] hover:bg-[#7856FF] text-white flex items-center gap-2 px-6 py-3 rounded-md"
+                onClick={handleNext}
+                disabled={loadingState.submitting}
+              >
+                {loadingState.submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Next'
+                )}
+              </Button>
+            </div>
           </div>
         );
 
@@ -997,10 +1158,6 @@ export default function BusinessOnboardingPage() {
   }
 
 
-  const handleBack = () => {
-    router.back();
-  };
-
   const handleTabBack = () => {
     const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
     if (currentIndex > 0) {
@@ -1013,7 +1170,7 @@ export default function BusinessOnboardingPage() {
     if (currentIndex < tabs.length - 1) {
       setActiveTab(tabs[currentIndex + 1].id);
     } else {
-      confirmSubmit();
+      handleSubmit();
     }
   };
 
@@ -1023,7 +1180,7 @@ export default function BusinessOnboardingPage() {
         {/* Header Section */}
         <div className="flex gap-[7px] items-start mb-12">
           <button 
-            onClick={handleBack}
+            onClick={handleExit}
             className="flex items-center justify-center shrink-0 size-[32px] hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
             aria-label="Go back"
           >
@@ -1067,7 +1224,7 @@ export default function BusinessOnboardingPage() {
                 <p className="text-sm text-gray-600">
                   Step {tabs.findIndex(tab => tab.id === activeTab) + 1} of {tabs.length} • 2-3 min
                 </p>
-              </div>
+                </div>
                   </div>
 
             {/* Progress Bar */}
@@ -1079,6 +1236,18 @@ export default function BusinessOnboardingPage() {
             </div>
           </div>
         </div>
+
+        {activeTab === 'agreements-welcome' && (
+          <div className="lg:hidden mt-4">
+            <Button
+              className="w-full bg-[#6E4EFF] hover:bg-[#7856FF] text-white"
+              onClick={handleSubmit}
+              disabled={loadingState.submitting}
+            >
+              {loadingState.submitting ? 'Submitting...' : 'Create Business'}
+            </Button>
+          </div>
+        )}
 
         {/* Main Content Area */}
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-[55px] items-start w-full relative">
@@ -1233,7 +1402,7 @@ export default function BusinessOnboardingPage() {
                   ) : (
                     <div className="flex flex-col font-semibold justify-center leading-[0] relative shrink-0 text-[16px] text-nowrap text-white">
                       <p className="leading-[24px] whitespace-pre">
-                        {tabs.findIndex(tab => tab.id === activeTab) === tabs.length - 1 ? 'Create Account' : 'Next'}
+                        {tabs.findIndex(tab => tab.id === activeTab) === tabs.length - 1 ? 'Create Business' : 'Next'}
                       </p>
                     </div>
                   )}
@@ -1334,44 +1503,7 @@ export default function BusinessOnboardingPage() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Submit Confirmation Dialog */}
-        <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-[#17C653]" />
-                Confirm Submission
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to submit the business onboarding form? 
-                This will create the business account and send notifications to the team.
-                <br /><br />
-                <strong>Business:</strong> {formData.brandName || 'Unnamed Business'}
-                <br />
-                <strong>POC:</strong> {formData.pocName || 'Not specified'}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={cancelSubmit}>
-                Review Again
-              </AlertDialogCancel>
-              <AlertDialogAction 
-              onClick={handleSubmit}
-                className="bg-[#6E4EFF] hover:bg-[#7856FF]"
-                disabled={loadingState.submitting}
-              >
-                {loadingState.submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit & Create Account'
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {/* Submit Confirmation Dialog removed */}
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ interface FormContextType {
   setError: (field: string, error: string) => void;
   clearError: (field: string) => void;
   setTouched: (field: string, touched: boolean) => void;
-  validateField: (field: string, value: any) => void;
+  validateField: (field: string, value: unknown) => void;
   isSubmitting: boolean;
 }
 
@@ -27,9 +27,9 @@ export function useFormContext() {
 
 interface FormProps {
   children: React.ReactNode;
-  onSubmit: (data: any) => Promise<void> | void;
-  initialValues?: Record<string, any>;
-  validationSchema?: Record<string, (value: any) => string | null>;
+  onSubmit: (data: unknown) => Promise<void> | void;
+  initialValues?: Record<string, unknown>;
+  validationSchema?: Record<string, (value: unknown) => string | null>;
   className?: string;
   submitButtonText?: string;
   showSubmitButton?: boolean;
@@ -64,7 +64,7 @@ export function Form({
     setTouched(prev => ({ ...prev, [field]: touched }));
   }, []);
 
-  const validateField = useCallback((field: string, value: any) => {
+  const validateField = useCallback((field: string, value: unknown) => {
     const validator = validationSchema[field];
     if (validator) {
       const error = validator(value);
@@ -83,7 +83,7 @@ export function Form({
     try {
       // Validate all fields
       const formData = new FormData(e.target as HTMLFormElement);
-      const data: Record<string, any> = {};
+      const data: Record<string, unknown> = {};
       
       for (const [key, value] of formData.entries()) {
         data[key] = value;
