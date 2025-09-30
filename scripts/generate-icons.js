@@ -5,6 +5,7 @@ const path = require('path');
 const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
 const inputSvg = path.join(__dirname, '../public/icon.svg');
 const outputDir = path.join(__dirname, '../public/icons');
+const faviconPath = path.join(__dirname, '../src/app/favicon.ico');
 
 // Ensure output directory exists
 if (!fs.existsSync(outputDir)) {
@@ -26,6 +27,14 @@ async function generateIcons() {
       console.log(`Generated icon-${size}x${size}.png`);
     }
     
+    // Generate favicon.ico (32x32 PNG converted to ICO)
+    console.log('Generating favicon.ico...');
+    await sharp(inputSvg)
+      .resize(32, 32)
+      .png()
+      .toFile(faviconPath);
+    
+    console.log('Generated favicon.ico');
     console.log('All icons generated successfully!');
   } catch (error) {
     console.error('Error generating icons:', error);

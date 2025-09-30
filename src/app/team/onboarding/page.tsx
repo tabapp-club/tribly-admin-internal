@@ -6,10 +6,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { ImprovedInput } from '@/components/ui/ImprovedInput';
+import { ImprovedTextarea } from '@/components/ui/ImprovedTextarea';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   User,
@@ -201,58 +200,67 @@ export default function TeamOnboardingPage() {
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label htmlFor="firstName" className="mb-0.5">First Name *</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    placeholder="First name"
-                    className="pl-10"
-                  />
-                </div>
-              </div>
+              <ImprovedInput
+                id="firstName"
+                label="First Name"
+                value={formData.firstName}
+                onChange={(e) => handleInputChange('firstName', e.target.value)}
+                placeholder="First name"
+                icon={<User className="h-4 w-4" />}
+                required
+                validate={(value) => {
+                  if (!value) return 'First name is required';
+                  if (value.length < 2) return 'Must be at least 2 characters';
+                  return null;
+                }}
+              />
 
-              <div>
-                <Label htmlFor="lastName" className="mb-0.5">Last Name *</Label>
-                <Input
-                  id="lastName"
-                  value={formData.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  placeholder="Last name"
-                />
-              </div>
+              <ImprovedInput
+                id="lastName"
+                label="Last Name"
+                value={formData.lastName}
+                onChange={(e) => handleInputChange('lastName', e.target.value)}
+                placeholder="Last name"
+                required
+                validate={(value) => {
+                  if (!value) return 'Last name is required';
+                  if (value.length < 2) return 'Must be at least 2 characters';
+                  return null;
+                }}
+              />
 
-              <div>
-                <Label htmlFor="email" className="mb-0.5">Work Email *</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    placeholder="work@company.com"
-                    className="pl-10"
-                  />
-                </div>
-              </div>
+              <ImprovedInput
+                id="email"
+                label="Work Email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                placeholder="work@company.com"
+                icon={<Mail className="h-4 w-4" />}
+                required
+                validate={(value) => {
+                  if (!value) return 'Work email is required';
+                  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                  if (!emailRegex.test(value)) return 'Please enter a valid email address';
+                  return null;
+                }}
+              />
 
-              <div>
-                <Label htmlFor="phone" className="mb-0.5">Work Phone *</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    placeholder="+1 (555) 123-4567"
-                    className="pl-10"
-                  />
-                </div>
-              </div>
+              <ImprovedInput
+                id="phone"
+                label="Work Phone"
+                value={formData.phone}
+                onChange={(e) => handleInputChange('phone', e.target.value)}
+                placeholder="+1 (555) 123-4567"
+                icon={<Phone className="h-4 w-4" />}
+                required
+                validate={(value) => {
+                  if (!value) return 'Work phone is required';
+                  const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+                  if (!phoneRegex.test(value.replace(/[\s\-\(\)]/g, ''))) return 'Please enter a valid phone number';
+                  return null;
+                }}
+              />
 
               <div>
                 <Label htmlFor="personalEmail" className="mb-0.5">Personal Email</Label>

@@ -4,6 +4,7 @@ export interface User {
   id: string
   name: string
   email: string
+  phone: string // Mobile number is now required for OTP authentication
   role: UserRole
   avatar?: string
   isActive: boolean
@@ -11,6 +12,9 @@ export interface User {
   updatedAt: Date
   lastLoginAt?: Date
   permissions: Permission[]
+  // Additional profile fields
+  jobTitle?: string
+  department?: string
 }
 
 export interface Permission {

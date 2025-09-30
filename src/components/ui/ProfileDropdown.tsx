@@ -16,7 +16,6 @@ import {
   Calendar,
   ChevronDown,
   ChevronUp,
-  Bell,
   Key,
   Database
 } from 'lucide-react';
@@ -91,17 +90,10 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
     setIsOpen(false);
   };
 
-  const handleNotificationsClick = () => {
-    // Navigate to notifications page or show notification panel
-    setIsOpen(false);
-  };
-
-
   // Mock user stats - in a real app, this would come from an API
   const userStats = {
     businessesManaged: 12,
     teamMembers: 8,
-    notifications: 3,
     accountAge: '2 years, 3 months'
   };
 
@@ -123,7 +115,7 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
         <div className="flex flex-col items-start">
           <div className="flex items-center gap-2">
             <span className="text-[16px] font-bold text-black">
-              {getRoleDisplayName(user.role)}
+              {user.name}
             </span>
             {isOpen ? (
               <ChevronUp className="h-4 w-4 text-gray-500" />
@@ -132,7 +124,7 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
             )}
           </div>
           <span className="text-[12px] font-normal text-gray-600">
-            ID -00244
+            {getRoleDisplayName(user.role)}
           </span>
         </div>
       </button>
@@ -171,29 +163,14 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
                 <span>Profile Settings</span>
               </button>
 
-              <button
-                onClick={handleNotificationsClick}
-                className="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-              >
-                <div className="relative">
-                  <Bell className="h-4 w-4" />
-                  {userStats.notifications > 0 && (
-                    <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-                      {userStats.notifications}
-                    </span>
-                  )}
-                </div>
-                <span>Notifications</span>
-              </button>
-
 
               {/* Account Info */}
               <div className="border-t border-gray-100 my-2"></div>
               
               <div className="px-3 py-2 text-xs text-gray-500 space-y-1">
                 <div className="flex items-center gap-2">
-                  <Mail className="h-3 w-3" />
-                  <span>{user.email}</span>
+                  <Phone className="h-3 w-3" />
+                  <span>{user.phone || 'No phone number'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-3 w-3" />
@@ -266,28 +243,13 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
                   <span className="text-lg">Profile Settings</span>
                 </button>
 
-                <button
-                  onClick={handleNotificationsClick}
-                  className="w-full flex items-center gap-4 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
-                >
-                  <div className="relative">
-                    <Bell className="h-5 w-5" />
-                    {userStats.notifications > 0 && (
-                      <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-                        {userStats.notifications}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-lg">Notifications</span>
-                </button>
-
                 {/* Account Info */}
                 <div className="border-t border-gray-100 my-4"></div>
                 
                 <div className="px-4 py-3 text-sm text-gray-500 space-y-3">
                   <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4" />
-                    <span>{user.email}</span>
+                    <Phone className="h-4 w-4" />
+                    <span>{user.phone || 'No phone number'}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4" />

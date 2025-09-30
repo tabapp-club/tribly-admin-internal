@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { ImprovedInput } from '@/components/ui/ImprovedInput';
+import { ImprovedTextarea } from '@/components/ui/ImprovedTextarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +24,9 @@ import {
   AlertCircle,
   CheckCircle,
   Info,
-  ChevronDown
+  ChevronDown,
+  Briefcase,
+  Clock
 } from 'lucide-react';
 
 interface TabItem {
@@ -36,19 +39,20 @@ interface TabItem {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading, updateUser } = useAuth();
   const { addNotification } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
+  const [isClient, setIsClient] = useState(false);
 
-  // Settings state
+  // Settings state - initialize with empty values, will be populated by useEffect
   const [profileSettings, setProfileSettings] = useState({
-    firstName: 'Admin',
-    lastName: 'User',
-    email: 'admin@tribly.com',
-    phone: '+1 (555) 123-4567',
-    jobTitle: 'Platform Administrator',
-    department: 'Operations'
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    jobTitle: '',
+    department: ''
   });
 
   const [notificationSettings, setNotificationSettings] = useState({
@@ -66,6 +70,48 @@ export default function SettingsPage() {
     passwordPolicy: 'strong',
     ipWhitelist: false
   });
+
+  // Set client-side flag to prevent hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Validation functions
+  const validateEmail = (value: string) => {
+    if (!value) return 'Email is required';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) return 'Please enter a valid email address';
+    return null;
+  };
+
+  const validateName = (value: string) => {
+    if (!value) return 'This field is required';
+    if (value.length < 2) return 'Must be at least 2 characters';
+    return null;
+  };
+
+  const validatePhone = (value: string) => {
+    if (!value) return null; // Optional field
+    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+    if (!phoneRegex.test(value.replace(/[\s\-\(\)]/g, ''))) return 'Please enter a valid phone number';
+    return null;
+  };
+
+  // Update profile settings when user data changes
+  useEffect(() => {
+    if (user) {
+      const nameParts = user.name?.split(' ') || ['', ''];
+      const newProfileSettings = {
+        firstName: nameParts[0] || '',
+        lastName: nameParts.slice(1).join(' ') || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        jobTitle: user.jobTitle || '',
+        department: user.department || ''
+      };
+      setProfileSettings(newProfileSettings);
+    }
+  }, [user]);
 
   const tabs: TabItem[] = [
     {
@@ -94,14 +140,31 @@ export default function SettingsPage() {
   const handleSave = async (section: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
+      // Simulate API call - in a real app, this would call your backend
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      addNotification({
-        title: 'Settings Saved',
-        message: `${section} settings have been updated successfully.`,
-        type: 'success'
-      });
+      if (section === 'general') {
+        // Update user data using AuthContext (in a real app, this would be a backend call)
+        updateUser({
+          name: `${profileSettings.firstName} ${profileSettings.lastName}`.trim(),
+          email: profileSettings.email,
+          phone: profileSettings.phone,
+          jobTitle: profileSettings.jobTitle,
+          department: profileSettings.department
+        });
+        
+        addNotification({
+          title: 'Profile Updated',
+          message: 'Your profile information has been updated successfully.',
+          type: 'success'
+        });
+      } else {
+        addNotification({
+          title: 'Settings Saved',
+          message: `${section} settings have been updated successfully.`,
+          type: 'success'
+        });
+      }
     } catch (error) {
       addNotification({
         title: 'Save Failed',
@@ -118,76 +181,105 @@ export default function SettingsPage() {
     router.back();
   };
 
+  // Show loading state while auth is loading (only on client)
+  if (isClient && authLoading) {
+    return (
+      <div className="bg-[#f6f6f6] relative size-full min-h-screen p-4 lg:p-6 overflow-hidden">
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#6e4eff]"></div>
+              <span className="text-gray-600">Loading settings...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+  // Show loading state during hydration or when user data is not loaded
+  if (!isClient || !user) {
+    return (
+      <div className="bg-[#f6f6f6] relative size-full min-h-screen p-4 lg:p-6 overflow-hidden">
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#6e4eff]"></div>
+              <span className="text-gray-600">Loading profile data...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'general':
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label htmlFor="firstName" className="mb-0.5">First Name *</Label>
-                <Input
-                  id="firstName"
-                  value={profileSettings.firstName}
-                  onChange={(e) => setProfileSettings(prev => ({ ...prev, firstName: e.target.value }))}
-                  placeholder="Enter first name"
-                />
-              </div>
+              <ImprovedInput
+                id="firstName"
+                label="First Name"
+                value={profileSettings.firstName}
+                onChange={(e) => setProfileSettings(prev => ({ ...prev, firstName: e.target.value }))}
+                placeholder="Enter first name"
+                validate={validateName}
+                required
+                icon={<User className="h-4 w-4" />}
+              />
 
-              <div>
-                <Label htmlFor="lastName" className="mb-0.5">Last Name *</Label>
-                <Input
-                  id="lastName"
-                  value={profileSettings.lastName}
-                  onChange={(e) => setProfileSettings(prev => ({ ...prev, lastName: e.target.value }))}
-                  placeholder="Enter last name"
-                />
-              </div>
+              <ImprovedInput
+                id="lastName"
+                label="Last Name"
+                value={profileSettings.lastName}
+                onChange={(e) => setProfileSettings(prev => ({ ...prev, lastName: e.target.value }))}
+                placeholder="Enter last name"
+                validate={validateName}
+                required
+                icon={<User className="h-4 w-4" />}
+              />
 
-              <div>
-                <Label htmlFor="email" className="mb-0.5">Email Address *</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    value={profileSettings.email}
-                    onChange={(e) => setProfileSettings(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="Enter email address"
-                    className="pl-10"
-                  />
-                </div>
-              </div>
+              <ImprovedInput
+                id="email"
+                label="Email Address"
+                type="email"
+                value={profileSettings.email}
+                onChange={(e) => setProfileSettings(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="Enter email address"
+                validate={validateEmail}
+                required
+                icon={<Mail className="h-4 w-4" />}
+              />
 
-              <div>
-                <Label htmlFor="phone" className="mb-0.5">Phone Number</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={profileSettings.phone}
-                    onChange={(e) => setProfileSettings(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="Enter phone number"
-                    className="pl-10"
-                  />
-                </div>
-              </div>
+              <ImprovedInput
+                id="phone"
+                label="Phone Number"
+                type="tel"
+                value={profileSettings.phone}
+                onChange={(e) => setProfileSettings(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="Enter phone number"
+                validate={validatePhone}
+                icon={<Phone className="h-4 w-4" />}
+              />
 
-              <div>
-                <Label htmlFor="jobTitle" className="mb-0.5">Job Title</Label>
-                <Input
-                  id="jobTitle"
-                  value={profileSettings.jobTitle}
-                  onChange={(e) => setProfileSettings(prev => ({ ...prev, jobTitle: e.target.value }))}
-                  placeholder="Enter job title"
-                />
-              </div>
+              <ImprovedInput
+                id="jobTitle"
+                label="Job Title"
+                value={profileSettings.jobTitle}
+                onChange={(e) => setProfileSettings(prev => ({ ...prev, jobTitle: e.target.value }))}
+                placeholder="Enter job title"
+                icon={<Briefcase className="h-4 w-4" />}
+              />
 
-              <div>
-                <Label htmlFor="department" className="mb-0.5">Department</Label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Department
+                </label>
                 <Select value={profileSettings.department} onValueChange={(value) => setProfileSettings(prev => ({ ...prev, department: value }))}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11">
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
@@ -200,8 +292,6 @@ export default function SettingsPage() {
                   </SelectContent>
                 </Select>
               </div>
-
-
             </div>
           </div>
         );
@@ -301,16 +391,21 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="sessionTimeout" className="mb-0.5">Session Timeout (minutes)</Label>
-                <Input
-                  id="sessionTimeout"
-                  type="number"
-                  value={securitySettings.sessionTimeout}
-                  onChange={(e) => setSecuritySettings(prev => ({ ...prev, sessionTimeout: parseInt(e.target.value) }))}
-                  placeholder="30"
-                />
-              </div>
+              <ImprovedInput
+                id="sessionTimeout"
+                label="Session Timeout (minutes)"
+                type="number"
+                value={securitySettings.sessionTimeout.toString()}
+                onChange={(e) => setSecuritySettings(prev => ({ ...prev, sessionTimeout: parseInt(e.target.value) || 30 }))}
+                placeholder="30"
+                validate={(value) => {
+                  const num = parseInt(value);
+                  if (isNaN(num) || num < 5) return 'Must be at least 5 minutes';
+                  if (num > 1440) return 'Cannot exceed 24 hours (1440 minutes)';
+                  return null;
+                }}
+                icon={<Clock className="h-4 w-4" />}
+              />
 
               <div>
                 <Label htmlFor="passwordPolicy" className="mb-0.5">Password Policy</Label>

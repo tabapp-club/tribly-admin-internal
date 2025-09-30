@@ -6,10 +6,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
+import { ImprovedInput } from '@/components/ui/ImprovedInput';
+import { ImprovedTextarea } from '@/components/ui/ImprovedTextarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertDialog,
@@ -195,6 +194,8 @@ export default function BusinessOnboardingPage() {
   });
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showFailedModal, setShowFailedModal] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -248,7 +249,7 @@ export default function BusinessOnboardingPage() {
       title: 'Documents & Welcome Kit',
       description: 'Send agreement and welcome kit',
       icon: Send,
-      completed: false
+      completed: false // This tab is always accessible after account creation
     }
   ];
 
@@ -527,7 +528,9 @@ export default function BusinessOnboardingPage() {
 
   // Enhanced submit handler
   const handleSubmit = useCallback(async () => {
+    console.log('handleSubmit called');
     if (!validateForm()) {
+      console.log('Form validation failed');
       addNotification({
         title: 'Validation Error',
         message: 'Please fix all validation errors before submitting.',
@@ -537,59 +540,56 @@ export default function BusinessOnboardingPage() {
       return;
     }
 
+    console.log('Form validation passed, starting submission');
     setLoadingState(prev => ({ ...prev, submitting: true }));
 
     try {
-    // Simulate API call
+      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-    addNotification({
+      // Create business object from form data
+      const newBusiness = {
+        id: Date.now(), // Simple ID generation
+        name: formData.brandName,
+        industry: formData.businessType,
+        status: 'active' as const,
+        userType: 'trial' as const, // Default to trial for new businesses
+        subscription: 'Individual', // Default subscription
+        revenue: 0,
+        users: 1, // Default to 1 user (the POC)
+        onboardedAt: new Date().toISOString().split('T')[0],
+        lastActivity: 'Just now',
+        assignedTo: formData.pocName,
+        features: ['Tribly AI for Business'], // Default features
+        growthRate: 0,
+        mrr: 0,
+        churnRisk: 'low' as const
+      };
+
+      // Save to localStorage
+      try {
+        const existingBusinesses = localStorage.getItem('onboardedBusinesses');
+        const businesses = existingBusinesses ? JSON.parse(existingBusinesses) : [];
+        businesses.push(newBusiness);
+        localStorage.setItem('onboardedBusinesses', JSON.stringify(businesses));
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('businessCreated', { detail: newBusiness }));
+      } catch (error) {
+        console.error('Error saving business to localStorage:', error);
+      }
+      
+      addNotification({
         title: 'Business Onboarded Successfully!',
         message: `${formData.brandName} has been successfully onboarded and is ready to use.`,
         type: 'success',
         isRead: false
-    });
+      });
 
-    // Reset form
-    setFormData({
-        brandName: '',
-        businessType: '',
-      website: '',
-        description: '',
-        businessEmails: [''],
-        businessPhones: [''],
-        streetAddress: '',
-        city: '',
-        state: '',
-        zipCode: '',
-        country: '',
-        gstNumber: '',
-        panNumber: '',
-        businessRegistrationNumber: '',
-        posSystem: '',
-        posProvider: '',
-        posVersion: '',
-        terminalId: '',
-        serialNumber: '',
-        installationDate: '',
-        licenseKey: '',
-        pocName: '',
-        pocEmail: '',
-        pocPhone: '',
-        pocDesignation: ''
-      });
-      
-      setActiveTab('basic-info');
-      setValidationErrors({});
-      setTouchedFields(new Set());
-      setAutoSaveState({
-        lastSaved: null,
-        hasUnsavedChanges: false,
-        isAutoSaving: false
-      });
-      
-      // Redirect to businesses page
-      router.push('/businesses');
+      // Close submit dialog and show success modal
+      console.log('Showing success modal');
+      setShowSubmitDialog(false);
+      setShowSuccessModal(true);
     } catch (error) {
       addNotification({
         title: 'Submission Failed',
@@ -597,6 +597,10 @@ export default function BusinessOnboardingPage() {
         type: 'error',
         isRead: false
       });
+      
+      // Show failed modal
+      console.log('Showing failed modal');
+      setShowFailedModal(true);
     } finally {
       setLoadingState(prev => ({ ...prev, submitting: false }));
       setShowSubmitDialog(false);
@@ -620,12 +624,102 @@ export default function BusinessOnboardingPage() {
 
   // Confirm submit
   const confirmSubmit = useCallback(() => {
+    console.log('confirmSubmit called, showing submit dialog');
     setShowSubmitDialog(true);
   }, []);
 
   // Cancel submit
   const cancelSubmit = useCallback(() => {
     setShowSubmitDialog(false);
+  }, []);
+
+  // Check if current tab's mandatory fields are filled
+  const isCurrentTabValid = useCallback((): boolean => {
+    const currentTab = tabs.find(tab => tab.id === activeTab);
+    if (!currentTab) return false;
+    
+    // Only check fields that are actually marked as required in the form
+    switch (activeTab) {
+      case 'basic-info':
+        // Only brandName and businessType are required (website is optional)
+        return !!(formData.brandName && formData.businessType);
+      case 'contact-info':
+        // At least one email and one phone are required
+        return !!(formData.businessEmails.some(email => email.trim()) && formData.businessPhones.some(phone => phone.trim()));
+      case 'business-address':
+        // All address fields are required
+        return !!(formData.streetAddress && formData.city && formData.state && formData.zipCode && formData.country);
+      case 'business-registration':
+        // All fields are optional in this tab, so always allow navigation
+        return true;
+      case 'pos-accounting':
+        // All fields are optional in this tab, so always allow navigation
+        return true;
+      case 'primary-poc':
+        // All POC fields are required
+        const pocValid = !!(formData.pocName && formData.pocEmail && formData.pocPhone && formData.pocDesignation);
+        console.log('POC Validation:', {
+          pocName: formData.pocName,
+          pocEmail: formData.pocEmail,
+          pocPhone: formData.pocPhone,
+          pocDesignation: formData.pocDesignation,
+          isValid: pocValid
+        });
+        return pocValid;
+      case 'agreements-welcome':
+        return true; // This tab doesn't have navigation buttons
+      default:
+        return false;
+    }
+  }, [activeTab, formData]);
+
+  // Handle success modal action
+  const handleSuccessModalAction = useCallback(() => {
+    // Close success modal and navigate to agreements-welcome tab
+    setShowSuccessModal(false);
+    setActiveTab('agreements-welcome');
+  }, []);
+
+  // Handle failed modal action
+  const handleFailedModalAction = useCallback(() => {
+    setShowFailedModal(false);
+    // Restart the onboarding process by going back to first tab
+    setActiveTab('basic-info');
+    // Reset form data to start fresh
+    setFormData({
+      brandName: '',
+      businessType: '',
+      website: '',
+      description: '',
+      businessEmails: [''],
+      businessPhones: [''],
+      streetAddress: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: '',
+      gstNumber: '',
+      panNumber: '',
+      businessRegistrationNumber: '',
+      posSystem: '',
+      posProvider: '',
+      posVersion: '',
+      terminalId: '',
+      serialNumber: '',
+      installationDate: '',
+      licenseKey: '',
+      pocName: '',
+      pocEmail: '',
+      pocPhone: '',
+      pocDesignation: ''
+    });
+    setValidationErrors({});
+    setTouchedFields(new Set());
+    setAutoSaveState({
+      lastSaved: null,
+      hasUnsavedChanges: false,
+      isAutoSaving: false,
+    });
   }, []);
 
   // Form validation on mount and data change
@@ -661,34 +755,20 @@ export default function BusinessOnboardingPage() {
     const hasError = validationErrors[field];
     const isTouched = touchedFields.has(field);
     
-        return (
-            <div>
-        <Label htmlFor={field} className="mb-1">
-          {label} {required && <span className="text-red-500">*</span>}
-        </Label>
-              <div className="relative">
-          {icon && (
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground">
-              {icon}
-            </div>
-          )}
-              <Input
-            id={field}
-            type={type}
-            value={typeof formData[field as keyof FormData] === 'string' ? formData[field as keyof FormData] as string : ''}
-            onChange={(e) => handleInputChange(field, e.target.value)}
-            placeholder={placeholder}
-            className={`${icon ? 'pl-10' : ''} ${hasError && isTouched ? 'border-red-500 focus:border-red-500' : ''}`}
-              />
-            </div>
-        {hasError && isTouched && (
-          <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-            <AlertCircle className="h-3 w-3" />
-            {hasError}
-          </p>
-        )}
-          </div>
-        );
+    return (
+      <ImprovedInput
+        id={field}
+        label={label}
+        type={type}
+        value={typeof formData[field as keyof FormData] === 'string' ? formData[field as keyof FormData] as string : ''}
+        onChange={(e) => handleInputChange(field, e.target.value)}
+        placeholder={placeholder}
+        required={required}
+        icon={icon}
+        error={hasError && isTouched ? (Array.isArray(hasError) ? hasError[0] : hasError) : undefined}
+        containerClassName="w-full"
+      />
+    );
   };
 
   // Helper function to render textarea with validation
@@ -696,31 +776,18 @@ export default function BusinessOnboardingPage() {
     const hasError = validationErrors[field];
     const isTouched = touchedFields.has(field);
     
-        return (
-            <div>
-        <Label htmlFor={field} className="mb-1">
-          {label} {required && <span className="text-red-500">*</span>}
-        </Label>
-        <Textarea
-          id={field}
-          value={typeof formData[field as keyof FormData] === 'string' ? formData[field as keyof FormData] as string : ''}
-          onChange={(e) => handleInputChange(field, e.target.value)}
-          placeholder={placeholder}
-          className={`${hasError && isTouched ? 'border-red-500 focus:border-red-500' : ''}`}
-          maxLength={maxLength}
-        />
-        {maxLength && (
-          <p className="text-xs text-gray-500 mt-1">
-            {typeof formData[field as keyof FormData] === 'string' ? (formData[field as keyof FormData] as string).length : 0}/{maxLength} characters
-          </p>
-        )}
-        {hasError && isTouched && (
-          <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-            <AlertCircle className="h-3 w-3" />
-            {hasError}
-          </p>
-        )}
-            </div>
+    return (
+      <ImprovedTextarea
+        id={field}
+        label={label}
+        value={typeof formData[field as keyof FormData] === 'string' ? formData[field as keyof FormData] as string : ''}
+        onChange={(e) => handleInputChange(field, e.target.value)}
+        placeholder={placeholder}
+        required={required}
+        maxLength={maxLength}
+        error={hasError && isTouched ? (Array.isArray(hasError) ? hasError[0] : hasError) : undefined}
+        containerClassName="w-full"
+      />
     );
   };
 
@@ -730,15 +797,25 @@ export default function BusinessOnboardingPage() {
     const isTouched = touchedFields.has(field);
     
     return (
-            <div>
-        <Label htmlFor={field} className="mb-1">
-          {label} {required && <span className="text-red-500">*</span>}
-        </Label>
+      <div className="space-y-2">
+        <label 
+          htmlFor={field} 
+          className={`block text-sm font-medium text-gray-700 transition-colors duration-200 ${
+            hasError && isTouched ? 'text-red-700' : ''
+          }`}
+        >
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
         <Select 
           value={typeof formData[field as keyof FormData] === 'string' ? formData[field as keyof FormData] as string : ''} 
           onValueChange={(value) => handleInputChange(field, value)}
         >
-          <SelectTrigger className={hasError && isTouched ? 'border-red-500 focus:border-red-500' : ''}>
+          <SelectTrigger className={`h-11 rounded-[4px] transition-all duration-200 ease-in-out ${
+            hasError && isTouched 
+              ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+              : 'hover:border-gray-400 focus:border-blue-500 focus:ring-blue-500'
+          }`}>
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>
@@ -748,12 +825,12 @@ export default function BusinessOnboardingPage() {
           </SelectContent>
         </Select>
         {hasError && isTouched && (
-          <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-            <AlertCircle className="h-3 w-3" />
-            {hasError}
+          <p className="text-sm text-red-500 flex items-center gap-1.5 animate-in slide-in-from-top-1 duration-200">
+            <AlertCircle className="h-3 w-3 flex-shrink-0" />
+            <span>{Array.isArray(hasError) ? hasError[0] : hasError}</span>
           </p>
         )}
-            </div>
+      </div>
     );
   };
 
@@ -776,29 +853,22 @@ export default function BusinessOnboardingPage() {
           <div className="space-y-6">
             {/* Business Emails */}
             <div>
-              <Label className="mb-4 block">
+              <label className="block text-sm font-medium text-gray-700 mb-4">
                 Business Email IDs <span className="text-red-500">*</span>
-              </Label>
+              </label>
               <div className="space-y-3">
                 {formData.businessEmails.map((email, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <div className="flex-1">
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="email"
-                          value={email}
-                          onChange={(e) => handleArrayInputChange('businessEmails', index, e.target.value)}
-                          placeholder="business@example.com"
-                          className={`pl-10 ${validationErrors.businessEmails && touchedFields.has('businessEmails') ? 'border-red-500 focus:border-red-500' : ''}`}
-                        />
-                      </div>
-                      {validationErrors.businessEmails && touchedFields.has('businessEmails') && index === 0 && (
-                        <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          {validationErrors.businessEmails}
-                        </p>
-                      )}
+                      <ImprovedInput
+                        type="email"
+                        value={email}
+                        onChange={(e) => handleArrayInputChange('businessEmails', index, e.target.value)}
+                        placeholder="business@example.com"
+                        icon={<Mail className="h-4 w-4" />}
+                        error={validationErrors.businessEmails && touchedFields.has('businessEmails') && index === 0 ? (Array.isArray(validationErrors.businessEmails) ? validationErrors.businessEmails[0] : validationErrors.businessEmails) : undefined}
+                        containerClassName="w-full"
+                      />
                     </div>
                     {formData.businessEmails.length > 1 && (
                       <button
@@ -826,30 +896,23 @@ export default function BusinessOnboardingPage() {
 
             {/* Business Phones */}
             <div>
-              <Label className="mb-4 block">
+              <label className="block text-sm font-medium text-gray-700 mb-4">
                 Business Phone Numbers <span className="text-red-500">*</span>
-              </Label>
+              </label>
               <div className="space-y-3">
                 {formData.businessPhones.map((phone, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <div className="flex-1">
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                          type="tel"
-                          value={phone}
-                          onChange={(e) => handleArrayInputChange('businessPhones', index, e.target.value)}
-                          placeholder="+91 98765 43210"
-                          className={`pl-10 ${validationErrors.businessPhones && touchedFields.has('businessPhones') ? 'border-red-500 focus:border-red-500' : ''}`}
-                />
-              </div>
-                      {validationErrors.businessPhones && touchedFields.has('businessPhones') && index === 0 && (
-                        <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          {validationErrors.businessPhones}
-                        </p>
-                      )}
-            </div>
+                      <ImprovedInput
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => handleArrayInputChange('businessPhones', index, e.target.value)}
+                        placeholder="+91 98765 43210"
+                        icon={<Phone className="h-4 w-4" />}
+                        error={validationErrors.businessPhones && touchedFields.has('businessPhones') && index === 0 ? (Array.isArray(validationErrors.businessPhones) ? validationErrors.businessPhones[0] : validationErrors.businessPhones) : undefined}
+                        containerClassName="w-full"
+                      />
+                    </div>
                     {formData.businessPhones.length > 1 && (
                       <button
                         type="button"
@@ -1009,10 +1072,21 @@ export default function BusinessOnboardingPage() {
   };
 
   const handleNext = () => {
+    console.log('handleNext called, activeTab:', activeTab);
     const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
+    console.log('Current index:', currentIndex, 'Total tabs:', tabs.length);
+    
+    // If we're on the primary-poc tab, trigger account creation
+    if (activeTab === 'primary-poc') {
+      console.log('Primary POC tab - calling confirmSubmit for account creation');
+      confirmSubmit();
+      return;
+    }
+    
     if (currentIndex < tabs.length - 1) {
       setActiveTab(tabs[currentIndex + 1].id);
     } else {
+      console.log('Calling confirmSubmit');
       confirmSubmit();
     }
   };
@@ -1217,7 +1291,7 @@ export default function BusinessOnboardingPage() {
                 {/* Next Button */}
                 <button
                   onClick={handleNext}
-                  disabled={loadingState.submitting || loadingState.validating}
+                  disabled={loadingState.submitting || loadingState.validating || !isCurrentTabValid()}
                   className="bg-[#6E4EFF] box-border flex gap-[8px] h-[48px] items-center justify-center px-[16px] py-[12px] rounded-[4px] w-full sm:w-[218px] hover:bg-[#7856FF] transition-colors sm:ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loadingState.submitting ? (
@@ -1233,7 +1307,7 @@ export default function BusinessOnboardingPage() {
                   ) : (
                     <div className="flex flex-col font-semibold justify-center leading-[0] relative shrink-0 text-[16px] text-nowrap text-white">
                       <p className="leading-[24px] whitespace-pre">
-                        {tabs.findIndex(tab => tab.id === activeTab) === tabs.length - 1 ? 'Create Account' : 'Next'}
+                        {activeTab === 'primary-poc' ? 'Create Account' : 'Next'}
                       </p>
                     </div>
                   )}
@@ -1271,7 +1345,7 @@ export default function BusinessOnboardingPage() {
 
               <button
               onClick={handleNext}
-                disabled={activeTab === 'agreements-welcome' || loadingState.submitting || loadingState.validating}
+                disabled={activeTab === 'agreements-welcome' || loadingState.submitting || loadingState.validating || !isCurrentTabValid()}
                 className="flex items-center gap-2 px-6 py-3 bg-[#6E4EFF] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex-1 justify-center hover:bg-[#7856FF] transition-colors"
               >
                 {loadingState.submitting ? (
@@ -1287,7 +1361,7 @@ export default function BusinessOnboardingPage() {
                 ) : (
                   <>
                     <span className="text-sm font-medium">
-                      {tabs.findIndex(tab => tab.id === activeTab) === tabs.length - 1 ? 'Complete' : 'Next'}
+                      {activeTab === 'primary-poc' ? 'Create Account' : 'Next'}
                     </span>
               <svg 
                 width="16" 
@@ -1368,6 +1442,62 @@ export default function BusinessOnboardingPage() {
                 ) : (
                   'Submit & Create Account'
                 )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Success Modal */}
+        <AlertDialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader className="text-center">
+              <div className="mx-auto mb-4 w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <AlertDialogTitle className="text-xl font-semibold text-gray-900">
+                Account Created Successfully!
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-600 mt-2">
+                <strong>{formData.brandName || 'Business'}</strong> has been successfully onboarded and is ready to use.
+                <br /><br />
+                The business account is now active and the team has been notified. You can now proceed to send the agreement and welcome kit.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+              <AlertDialogAction 
+                onClick={handleSuccessModalAction}
+                className="w-full bg-[#6E4EFF] hover:bg-[#7856FF] text-white"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Continue to Agreements
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Failed Modal */}
+        <AlertDialog open={showFailedModal} onOpenChange={setShowFailedModal}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader className="text-center">
+              <div className="mx-auto mb-4 w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="h-8 w-8 text-red-600" />
+              </div>
+              <AlertDialogTitle className="text-xl font-semibold text-gray-900">
+                Account Creation Failed
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-600 mt-2">
+                We encountered an error while creating the business account for <strong>{formData.brandName || 'your business'}</strong>.
+                <br /><br />
+                Please try again or contact support if the problem persists.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+              <AlertDialogAction 
+                onClick={handleFailedModalAction}
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
+              >
+                <AlertCircle className="h-4 w-4 mr-2" />
+                Restart Onboarding
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
