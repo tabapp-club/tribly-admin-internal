@@ -586,7 +586,7 @@ export default function BusinessOnboardingPage() {
       };
 
       console.log('📤 Sending business data to API:', businessData);
-      console.log('🌐 API Base URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api');
+      console.log('🌐 API Base URL:', process.env.NEXT_PUBLIC_API_URL || 'https://api.tribly.ai');
 
       let response;
       let apiSuccess = false;

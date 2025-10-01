@@ -34,8 +34,8 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 export const env: EnvConfig = {
-  apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api',
-  appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  apiUrl: process.env.NEXT_PUBLIC_API_URL || 'https://api.tribly.ai',
+  appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://tribly.ai',
   isDevelopment: process.env.NODE_ENV === 'development',
   isProduction: process.env.NODE_ENV === 'production',
   enableAnalytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true',
