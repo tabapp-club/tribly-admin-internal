@@ -99,8 +99,8 @@ class PerformanceMonitor {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1];
         this.recordMetric('LCP', lastEntry.startTime, {
-          element: (lastEntry as any).element?.tagName,
-          url: (lastEntry as any).url,
+          element: (lastEntry as PerformanceEntry & { element?: Element }).element?.tagName,
+          url: (lastEntry as PerformanceEntry & { url?: string }).url,
         });
       });
 
@@ -114,8 +114,9 @@ class PerformanceMonitor {
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         entries.forEach((entry) => {
-          this.recordMetric('FID', entry.processingStart - entry.startTime, {
-            eventType: entry.name,
+          const fidEntry = entry as PerformanceEntry & { processingStart: number };
+          this.recordMetric('FID', fidEntry.processingStart - fidEntry.startTime, {
+            eventType: fidEntry.name,
           });
         });
       });
@@ -131,8 +132,9 @@ class PerformanceMonitor {
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         entries.forEach((entry) => {
-          if (!entry.hadRecentInput) {
-            clsValue += entry.value;
+          const clsEntry = entry as PerformanceEntry & { hadRecentInput: boolean; value: number };
+          if (!clsEntry.hadRecentInput) {
+            clsValue += clsEntry.value;
           }
         });
         this.recordMetric('CLS', clsValue);
@@ -164,10 +166,11 @@ class PerformanceMonitor {
     window.addEventListener('load', () => {
       const resources = performance.getEntriesByType('resource');
       resources.forEach((resource) => {
-        this.recordMetric('Resource Load', resource.duration, {
-          name: resource.name,
-          type: resource.initiatorType,
-          size: resource.transferSize,
+        const resourceEntry = resource as PerformanceEntry & { initiatorType: string; transferSize: number };
+        this.recordMetric('Resource Load', resourceEntry.duration, {
+          name: resourceEntry.name,
+          type: resourceEntry.initiatorType,
+          size: resourceEntry.transferSize,
         });
       });
     });
