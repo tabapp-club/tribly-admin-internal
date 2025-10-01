@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { authApi } from '@/utils/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ImprovedInput } from '@/components/ui/ImprovedInput';
@@ -26,7 +27,8 @@ import {
   Info,
   ChevronDown,
   Briefcase,
-  Clock
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 
 interface TabItem {
@@ -42,6 +44,7 @@ export default function SettingsPage() {
   const { user, isLoading: authLoading, updateUser } = useAuth();
   const { addNotification } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingUserData, setIsLoadingUserData] = useState(true);
   const [activeTab, setActiveTab] = useState('general');
   const [isClient, setIsClient] = useState(false);
 
@@ -52,7 +55,8 @@ export default function SettingsPage() {
     email: '',
     phone: '',
     jobTitle: '',
-    department: ''
+    department: '',
+    password: ''
   });
 
   const [notificationSettings, setNotificationSettings] = useState({
@@ -97,21 +101,66 @@ export default function SettingsPage() {
     return null;
   };
 
-  // Update profile settings when user data changes
+  const validatePassword = (value: string) => {
+    if (!value) return null; // Optional field
+    if (value.length < 6) return 'Password must be at least 6 characters long';
+    return null;
+  };
+
+  // Fetch user data from /me endpoint and update profile settings
   useEffect(() => {
-    if (user) {
-      const nameParts = user.name?.split(' ') || ['', ''];
-      const newProfileSettings = {
-        firstName: nameParts[0] || '',
-        lastName: nameParts.slice(1).join(' ') || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        jobTitle: user.jobTitle || '',
-        department: user.department || ''
-      };
-      setProfileSettings(newProfileSettings);
-    }
-  }, [user]);
+    const fetchUserData = async () => {
+      setIsLoadingUserData(true);
+      try {
+        const response = await authApi.getMe();
+        if (response.data) {
+          const userData = response.data;
+          console.log('User data from /me endpoint:', userData);
+
+          // Extract first and last name from the user data
+          const nameParts = userData.name?.split(' ') || ['', ''];
+          const newProfileSettings = {
+            firstName: userData.first_name || nameParts[0] || '',
+            lastName: userData.last_name || nameParts.slice(1).join(' ') || '',
+            email: userData.email || '',
+            phone: userData.phone_number || userData.phone || '',
+            jobTitle: userData.job_title || '',
+            department: userData.department || '',
+            password: '' // Always start with empty password
+          };
+
+          console.log('Setting profile settings:', newProfileSettings);
+          setProfileSettings(newProfileSettings);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user data from /me endpoint:', error);
+        // Fallback to user data from context
+        if (user) {
+          const nameParts = user.name?.split(' ') || ['', ''];
+          const newProfileSettings = {
+            firstName: nameParts[0] || '',
+            lastName: nameParts.slice(1).join(' ') || '',
+            email: user.email || '',
+            phone: user.phone || '',
+            jobTitle: user.jobTitle || '',
+            department: user.department || '',
+            password: ''
+          };
+          setProfileSettings(newProfileSettings);
+        }
+
+        addNotification({
+          title: 'Warning',
+          message: 'Could not fetch latest profile data. Using cached data.',
+          type: 'warning'
+        });
+      } finally {
+        setIsLoadingUserData(false);
+      }
+    };
+
+    fetchUserData();
+  }, [user, addNotification]);
 
   const tabs: TabItem[] = [
     {
@@ -140,11 +189,32 @@ export default function SettingsPage() {
   const handleSave = async (section: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call - in a real app, this would call your backend
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
       if (section === 'general') {
-        // Update user data using AuthContext (in a real app, this would be a backend call)
+        // Prepare data for API call - only include fields that have values
+        const updateData: {
+          first_name?: string;
+          last_name?: string;
+          email?: string;
+          password?: string;
+          phone_number?: string;
+          job_title?: string;
+          department?: string;
+        } = {};
+
+        if (profileSettings.firstName) updateData.first_name = profileSettings.firstName;
+        if (profileSettings.lastName) updateData.last_name = profileSettings.lastName;
+        if (profileSettings.email) updateData.email = profileSettings.email;
+        if (profileSettings.password) updateData.password = profileSettings.password;
+        if (profileSettings.phone) updateData.phone_number = profileSettings.phone;
+        if (profileSettings.jobTitle) updateData.job_title = profileSettings.jobTitle;
+        if (profileSettings.department) updateData.department = profileSettings.department;
+
+        // Call the API
+        console.log('🔐 Calling updateProfile API with data:', updateData);
+        const response = await authApi.updateProfile(updateData);
+        console.log('✅ UpdateProfile API response:', response);
+
+        // Update local user data
         updateUser({
           name: `${profileSettings.firstName} ${profileSettings.lastName}`.trim(),
           email: profileSettings.email,
@@ -152,7 +222,10 @@ export default function SettingsPage() {
           jobTitle: profileSettings.jobTitle,
           department: profileSettings.department
         });
-        
+
+        // Clear password field after successful update
+        setProfileSettings(prev => ({ ...prev, password: '' }));
+
         addNotification({
           title: 'Profile Updated',
           message: 'Your profile information has been updated successfully.',
@@ -165,10 +238,11 @@ export default function SettingsPage() {
           type: 'success'
         });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Profile update error:', error);
       addNotification({
         title: 'Save Failed',
-        message: 'Failed to save settings. Please try again.',
+        message: error?.message || 'Failed to save settings. Please try again.',
         type: 'error'
       });
     } finally {
@@ -181,15 +255,56 @@ export default function SettingsPage() {
     router.back();
   };
 
-  // Show loading state while auth is loading (only on client)
-  if (isClient && authLoading) {
+  const handleRefreshUserData = async () => {
+    setIsLoadingUserData(true);
+    try {
+      const response = await authApi.getMe();
+      if (response.data) {
+        const userData = response.data;
+        console.log('Refreshed user data from /me endpoint:', userData);
+
+        const nameParts = userData.name?.split(' ') || ['', ''];
+        const newProfileSettings = {
+          firstName: userData.first_name || nameParts[0] || '',
+          lastName: userData.last_name || nameParts.slice(1).join(' ') || '',
+          email: userData.email || '',
+          phone: userData.phone_number || userData.phone || '',
+          jobTitle: userData.job_title || '',
+          department: userData.department || '',
+          password: ''
+        };
+
+        setProfileSettings(newProfileSettings);
+
+        addNotification({
+          title: 'Profile Refreshed',
+          message: 'Profile data has been updated with latest information.',
+          type: 'success'
+        });
+      }
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+      addNotification({
+        title: 'Refresh Failed',
+        message: 'Could not refresh profile data. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setIsLoadingUserData(false);
+    }
+  };
+
+  // Show loading state while auth is loading or user data is being fetched
+  if (isClient && (authLoading || isLoadingUserData)) {
     return (
       <div className="bg-[#f6f6f6] relative size-full min-h-screen p-4 lg:p-6 overflow-hidden">
         <div className="max-w-7xl mx-auto w-full">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="flex items-center gap-2">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#6e4eff]"></div>
-              <span className="text-gray-600">Loading settings...</span>
+              <span className="text-gray-600">
+                {authLoading ? 'Loading settings...' : 'Loading profile data...'}
+              </span>
             </div>
           </div>
         </div>
@@ -219,6 +334,24 @@ export default function SettingsPage() {
       case 'general':
         return (
           <div className="space-y-6">
+            {/* Refresh Button */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Profile Information</h3>
+                <p className="text-sm text-gray-600">Update your personal details and preferences</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshUserData}
+                disabled={isLoadingUserData}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoadingUserData ? 'animate-spin' : ''}`} />
+                {isLoadingUserData ? 'Refreshing...' : 'Refresh Data'}
+              </Button>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <ImprovedInput
                 id="firstName"
@@ -272,6 +405,17 @@ export default function SettingsPage() {
                 onChange={(e) => setProfileSettings(prev => ({ ...prev, jobTitle: e.target.value }))}
                 placeholder="Enter job title"
                 icon={<Briefcase className="h-4 w-4" />}
+              />
+
+              <ImprovedInput
+                id="password"
+                label="New Password"
+                type="password"
+                value={profileSettings.password}
+                onChange={(e) => setProfileSettings(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="Enter new password (leave blank to keep current)"
+                validate={validatePassword}
+                icon={<Shield className="h-4 w-4" />}
               />
 
               <div className="space-y-2">
@@ -459,22 +603,22 @@ export default function SettingsPage() {
       <div className="max-w-7xl mx-auto w-full">
         {/* Header Section */}
         <div className="flex gap-[7px] items-start mb-12">
-          <button 
+          <button
             onClick={handleBack}
             className="flex items-center justify-center shrink-0 size-[32px] hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
             aria-label="Go back"
           >
-            <svg 
-              width="32" 
-              height="32" 
-              viewBox="0 0 32 32" 
-              fill="none" 
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 32 32"
+              fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path 
-                fillRule="evenodd" 
-                clipRule="evenodd" 
-                d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z" 
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z"
                 fill="#0D0D0D"
               />
             </svg>
@@ -529,7 +673,7 @@ export default function SettingsPage() {
           {/* Mobile Content Area */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
             {renderTabContent()}
-            
+
             {/* Mobile Save Button */}
             <div className="mt-6 pt-4 border-t border-gray-100">
               <Button
@@ -626,9 +770,9 @@ export default function SettingsPage() {
                 })()}
               </div>
             </div>
-            
+
             {renderTabContent()}
-            
+
             {/* Save Button */}
             <div className="flex justify-end mt-8">
               <Button

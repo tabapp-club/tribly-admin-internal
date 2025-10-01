@@ -93,7 +93,7 @@ export default function Home() {
           {/* Mobile Cards - Stack vertically */}
           <div className="space-y-4">
             {dashboardCards.map((card, index) => (
-              <Card 
+              <Card
                 key={card.title}
                 className="h-[180px] w-4/5 mx-auto cursor-pointer transition-all duration-200 border border-gray-200 shadow-none"
                 onClick={() => handleCardClick(card.href)}
@@ -110,18 +110,18 @@ export default function Home() {
                       {card.description}
                     </p>
                   </div>
-                  <svg 
-                    className="absolute top-3 right-3 h-6 w-6" 
-                    width="24" 
-                    height="24" 
-                    viewBox="0 0 32 32" 
-                    fill="none" 
+                  <svg
+                    className="absolute top-3 right-3 h-6 w-6"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 32 32"
+                    fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                   >
-                    <path 
-                      fillRule="evenodd" 
-                      clipRule="evenodd" 
-                      d="M28.8545 16.0001C28.0812 16.5332 26.8287 17.8511 25.8945 19.1469C24.7268 20.7668 24.0615 21.8096 23.6813 22.9082L22.1063 21.8471C22.2602 21.2016 23.0187 19.3706 24.8219 17.2106L3.14527 17.2106L3.14527 16.0001L28.8545 16.0001ZM28.8545 15.9999C28.0812 15.4668 26.8287 14.1489 25.8945 12.8531C24.7268 11.2332 24.0615 10.1904 23.6813 9.0918L22.1063 10.1529C22.2602 10.7984 23.0187 12.6294 24.8219 14.7894L3.14527 14.7894L3.14527 15.9999L28.8545 15.9999Z" 
+                    <path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M28.8545 16.0001C28.0812 16.5332 26.8287 17.8511 25.8945 19.1469C24.7268 20.7668 24.0615 21.8096 23.6813 22.9082L22.1063 21.8471C22.2602 21.2016 23.0187 19.3706 24.8219 17.2106L3.14527 17.2106L3.14527 16.0001L28.8545 16.0001ZM28.8545 15.9999C28.0812 15.4668 26.8287 14.1489 25.8945 12.8531C24.7268 11.2332 24.0615 10.1904 23.6813 9.0918L22.1063 10.1529C22.2602 10.7984 23.0187 12.6294 24.8219 14.7894L3.14527 14.7894L3.14527 15.9999L28.8545 15.9999Z"
                       fill="#626266"
                     />
                   </svg>
@@ -170,7 +170,7 @@ export default function Home() {
         <div className="absolute top-[214.5px] left-[calc(25%-10px)] w-[844px] h-[224px]">
           <div className="flex gap-4 h-full">
             {/* Business onboarding */}
-            <Card 
+            <Card
               className="flex-1 h-[224px] cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
               onClick={() => handleCardClick(dashboardCards[0].href)}
             >
@@ -186,18 +186,18 @@ export default function Home() {
                     {dashboardCards[0].description}
                   </p>
                 </div>
-                <svg 
-                  className="absolute top-4 right-4 h-6 w-6" 
-                  width="24" 
-                  height="24" 
-                  viewBox="0 0 32 32" 
-                  fill="none" 
+                <svg
+                  className="absolute top-4 right-4 h-6 w-6"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 32 32"
+                  fill="none"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  <path 
-                    fillRule="evenodd" 
-                    clipRule="evenodd" 
-                    d="M28.8545 16.0001C28.0812 16.5332 26.8287 17.8511 25.8945 19.1469C24.7268 20.7668 24.0615 21.8096 23.6813 22.9082L22.1063 21.8471C22.2602 21.2016 23.0187 19.3706 24.8219 17.2106L3.14527 17.2106L3.14527 16.0001L28.8545 16.0001ZM28.8545 15.9999C28.0812 15.4668 26.8287 14.1489 25.8945 12.8531C24.7268 11.2332 24.0615 10.1904 23.6813 9.0918L22.1063 10.1529C22.2602 10.7984 23.0187 12.6294 24.8219 14.7894L3.14527 14.7894L3.14527 15.9999L28.8545 15.9999Z" 
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M28.8545 16.0001C28.0812 16.5332 26.8287 17.8511 25.8945 19.1469C24.7268 20.7668 24.0615 21.8096 23.6813 22.9082L22.1063 21.8471C22.2602 21.2016 23.0187 19.3706 24.8219 17.2106L3.14527 17.2106L3.14527 16.0001L28.8545 16.0001ZM28.8545 15.9999C28.0812 15.4668 26.8287 14.1489 25.8945 12.8531C24.7268 11.2332 24.0615 10.1904 23.6813 9.0918L22.1063 10.1529C22.2602 10.7984 23.0187 12.6294 24.8219 14.7894L3.14527 14.7894L3.14527 15.9999L28.8545 15.9999Z"
                     fill="#626266"
                   />
                 </svg>
@@ -205,7 +205,7 @@ export default function Home() {
             </Card>
 
             {/* Business overview */}
-            <Card 
+            <Card
               className="flex-1 h-[224px] cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
               onClick={() => handleCardClick(dashboardCards[1].href)}
             >
@@ -221,18 +221,18 @@ export default function Home() {
                     {dashboardCards[1].description}
                   </p>
                 </div>
-                <svg 
-                  className="absolute top-4 right-4 h-6 w-6" 
-                  width="24" 
-                  height="24" 
-                  viewBox="0 0 32 32" 
-                  fill="none" 
+                <svg
+                  className="absolute top-4 right-4 h-6 w-6"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 32 32"
+                  fill="none"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  <path 
-                    fillRule="evenodd" 
-                    clipRule="evenodd" 
-                    d="M28.8545 16.0001C28.0812 16.5332 26.8287 17.8511 25.8945 19.1469C24.7268 20.7668 24.0615 21.8096 23.6813 22.9082L22.1063 21.8471C22.2602 21.2016 23.0187 19.3706 24.8219 17.2106L3.14527 17.2106L3.14527 16.0001L28.8545 16.0001ZM28.8545 15.9999C28.0812 15.4668 26.8287 14.1489 25.8945 12.8531C24.7268 11.2332 24.0615 10.1904 23.6813 9.0918L22.1063 10.1529C22.2602 10.7984 23.0187 12.6294 24.8219 14.7894L3.14527 14.7894L3.14527 15.9999L28.8545 15.9999Z" 
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M28.8545 16.0001C28.0812 16.5332 26.8287 17.8511 25.8945 19.1469C24.7268 20.7668 24.0615 21.8096 23.6813 22.9082L22.1063 21.8471C22.2602 21.2016 23.0187 19.3706 24.8219 17.2106L3.14527 17.2106L3.14527 16.0001L28.8545 16.0001ZM28.8545 15.9999C28.0812 15.4668 26.8287 14.1489 25.8945 12.8531C24.7268 11.2332 24.0615 10.1904 23.6813 9.0918L22.1063 10.1529C22.2602 10.7984 23.0187 12.6294 24.8219 14.7894L3.14527 14.7894L3.14527 15.9999L28.8545 15.9999Z"
                     fill="#626266"
                   />
                 </svg>

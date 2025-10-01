@@ -38,51 +38,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
           setUser(userData);
         } else {
-          // Auto-login for development - remove in production
-          const mockUser: User = {
-            id: '1',
-            name: 'Admin User',
-            email: 'admin@tribly.com',
-            phone: '+91 98765 43210',
-            role: 'master',
-            isActive: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            permissions: [
-              { id: '1', name: 'All Access', description: 'Full system access', resource: '*', action: '*' }
-            ],
-            jobTitle: 'Platform Administrator',
-            department: 'Operations'
-          };
-          
-          localStorage.setItem('auth_token', 'mock_token');
-          localStorage.setItem('user_data', JSON.stringify(mockUser));
-          setUser(mockUser);
+          // No token found, user needs to login
+          setUser(null);
         }
       } catch (error) {
         console.error('Auth check failed:', error);
-        // Auto-login for development even on error
-        const mockUser: User = {
-          id: '1',
-          name: 'Admin User',
-          email: 'admin@tribly.com',
-          phone: '+1 (555) 123-4567',
-          role: 'master',
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          permissions: [
-            { id: '1', name: 'All Access', description: 'Full system access', resource: '*', action: '*' }
-          ],
-          jobTitle: 'Platform Administrator',
-          department: 'Operations'
-        };
-        
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('auth_token', 'mock_token');
-          localStorage.setItem('user_data', JSON.stringify(mockUser));
-        }
-        setUser(mockUser);
+        // Authentication failed, user needs to login
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -94,33 +56,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Mock login - replace with actual API call
-      if (email === 'admin@tribly.com' && password === 'admin123') {
-        const mockUser: User = {
-          id: '1',
-          name: 'Admin User',
-          email: 'admin@tribly.com',
-          phone: '+1 (555) 123-4567',
-          role: 'master',
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          permissions: [
-            { id: '1', name: 'All Access', description: 'Full system access', resource: '*', action: '*' }
-          ],
-          jobTitle: 'Platform Administrator',
-          department: 'Operations'
-        };
+      // Check if we have a valid token and user data from the API call
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const userData = typeof window !== 'undefined' ? localStorage.getItem('user_data') : null;
 
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('auth_token', 'mock_token');
-          localStorage.setItem('user_data', JSON.stringify(mockUser));
+      if (token && userData) {
+        // Parse the user data and set it
+        const parsedUserData = JSON.parse(userData);
+
+        // Ensure required fields exist with defaults
+        if (!parsedUserData.permissions) {
+          parsedUserData.permissions = [
+            { id: '1', name: 'All Access', description: 'Full system access', resource: '*', action: '*' }
+          ];
         }
-        setUser(mockUser);
-      } else {
-        throw new Error('Invalid credentials');
-      }
+
+        if (!parsedUserData.role) {
+          parsedUserData.role = 'master';
+        }
+
+        if (!parsedUserData.isActive) {
+          parsedUserData.isActive = true;
+        }
+
+        if (!parsedUserData.createdAt) {
+          parsedUserData.createdAt = new Date();
+        }
+
+        if (!parsedUserData.updatedAt) {
+          parsedUserData.updatedAt = new Date();
+        }
+
+        setUser(parsedUserData);
+        console.log('User set from localStorage:', parsedUserData);
+        } else {
+          // No valid token or user data found
+          throw new Error('No valid authentication data found');
+        }
     } catch (error) {
+      console.error('Login context error:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -130,19 +104,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sendOTP = async (mobileNumber: string) => {
     setIsLoading(true);
     try {
-      // Mock OTP sending - replace with actual API call
-      // In a real app, this would send an SMS to the mobile number
-      console.log(`Sending OTP to ${mobileNumber}`);
-      
-      // Store the mobile number temporarily for verification
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('pending_mobile', mobileNumber);
-        // Store a mock OTP for demo purposes
-        localStorage.setItem('pending_otp', '123456');
-      }
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // TODO: Implement actual OTP sending API call
+      throw new Error('OTP functionality not implemented');
     } catch (error) {
       throw error;
     } finally {
@@ -153,38 +116,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const verifyOTP = async (mobileNumber: string, otp: string) => {
     setIsLoading(true);
     try {
-      // Mock OTP verification - replace with actual API call
-      const storedMobile = typeof window !== 'undefined' ? localStorage.getItem('pending_mobile') : null;
-      const storedOTP = typeof window !== 'undefined' ? localStorage.getItem('pending_otp') : null;
-      
-      if (storedMobile === mobileNumber && storedOTP === otp) {
-        // Find user by mobile number or create new user
-        const mockUser: User = {
-          id: '1',
-          name: 'Admin User',
-          email: 'admin@tribly.com',
-          phone: mobileNumber,
-          role: 'master',
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          permissions: [
-            { id: '1', name: 'All Access', description: 'Full system access', resource: '*', action: '*' }
-          ],
-          jobTitle: 'Platform Administrator',
-          department: 'Operations'
-        };
-
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('auth_token', 'mock_token');
-          localStorage.setItem('user_data', JSON.stringify(mockUser));
-          localStorage.removeItem('pending_mobile');
-          localStorage.removeItem('pending_otp');
-        }
-        setUser(mockUser);
-      } else {
-        throw new Error('Invalid OTP');
-      }
+      // TODO: Implement actual OTP verification API call
+      throw new Error('OTP functionality not implemented');
     } catch (error) {
       throw error;
     } finally {
@@ -207,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...userData,
         updatedAt: new Date()
       };
-      
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('user_data', JSON.stringify(updatedUser));
       }
@@ -217,8 +150,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const hasPermission = (resource: string, action: string): boolean => {
     if (!user) return false;
-    
-    return user.permissions.some(permission => 
+
+    return user.permissions.some(permission =>
       (permission.resource === '*' || permission.resource === resource) &&
       (permission.action === '*' || permission.action === action)
     );

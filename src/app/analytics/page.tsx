@@ -20,37 +20,14 @@ import {
 
 export default function AnalyticsPage() {
 
-  // Mock data
-  const revenueData = [
-    { month: 'Jan', revenue: 45000, businesses: 120 },
-    { month: 'Feb', revenue: 52000, businesses: 135 },
-    { month: 'Mar', revenue: 48000, businesses: 128 },
-    { month: 'Apr', revenue: 61000, businesses: 145 },
-    { month: 'May', revenue: 55000, businesses: 138 },
-    { month: 'Jun', revenue: 67000, businesses: 152 }
-  ];
+  // Analytics data - in a real app, this would come from an API
+  const revenueData = [];
 
-  const topBusinesses = [
-    { name: 'TechCorp Solutions', revenue: 12500, growth: 15.2, industry: 'Technology' },
-    { name: 'HealthCare Plus', revenue: 15300, growth: 8.7, industry: 'Healthcare' },
-    { name: 'RetailMax Inc', revenue: 8200, growth: 22.1, industry: 'Retail' },
-    { name: 'FinanceFlow Ltd', revenue: 5800, growth: -2.3, industry: 'Finance' }
-  ];
+  const topBusinesses = [];
 
-  const featureUsage = [
-    { name: 'Dashboard Analytics', usage: 98, trend: 'up' },
-    { name: 'Campaign Management', usage: 87, trend: 'up' },
-    { name: 'Data Center', usage: 92, trend: 'stable' },
-    { name: 'Automation', usage: 78, trend: 'up' },
-    { name: 'Tribly AI', usage: 45, trend: 'up' },
-    { name: 'Cohorts', usage: 65, trend: 'down' }
-  ];
+  const featureUsage = [];
 
-  const teamPerformance = [
-    { name: 'Sarah Johnson', businesses: 45, revenue: 125000, target: 50 },
-    { name: 'Mike Chen', businesses: 32, revenue: 89500, target: 40 },
-    { name: 'Emily Davis', businesses: 28, revenue: 76200, target: 35 }
-  ];
+  const teamPerformance = [];
 
 
   return (

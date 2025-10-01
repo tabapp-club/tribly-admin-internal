@@ -77,93 +77,8 @@ export default function TeamOverviewPage() {
   // Debounced search for better performance
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  // Mock data - in a real app, this would come from an API
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
-    {
-      id: '1',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@tribly.com',
-      role: 'manager',
-      department: 'Sales',
-      jobTitle: 'Sales Manager',
-      isActive: true,
-      avatar: '',
-      performance: {
-        businessesOnboarded: 45,
-        totalRevenue: 125000,
-        conversionRate: 78,
-        averageOnboardingTime: 3.2,
-        monthlyTarget: 15,
-        monthlyAchieved: 12
-      },
-      lastActiveAt: new Date('2024-01-15T10:30:00'),
-      createdAt: new Date('2023-06-15'),
-      assignedBusinesses: 23
-    },
-    {
-      id: '2',
-      name: 'Michael Chen',
-      email: 'michael.chen@tribly.com',
-      role: 'team',
-      department: 'Customer Success',
-      jobTitle: 'Customer Success Specialist',
-      isActive: true,
-      avatar: '',
-      performance: {
-        businessesOnboarded: 32,
-        totalRevenue: 89000,
-        conversionRate: 85,
-        averageOnboardingTime: 2.8,
-        monthlyTarget: 12,
-        monthlyAchieved: 10
-      },
-      lastActiveAt: new Date('2024-01-15T09:15:00'),
-      createdAt: new Date('2023-08-20'),
-      assignedBusinesses: 18
-    },
-    {
-      id: '3',
-      name: 'Emily Rodriguez',
-      email: 'emily.rodriguez@tribly.com',
-      role: 'team',
-      department: 'Marketing',
-      jobTitle: 'Marketing Coordinator',
-      isActive: true,
-      avatar: '',
-      performance: {
-        businessesOnboarded: 28,
-        totalRevenue: 67000,
-        conversionRate: 72,
-        averageOnboardingTime: 3.5,
-        monthlyTarget: 10,
-        monthlyAchieved: 8
-      },
-      lastActiveAt: new Date('2024-01-14T16:45:00'),
-      createdAt: new Date('2023-09-10'),
-      assignedBusinesses: 15
-    },
-    {
-      id: '4',
-      name: 'David Kim',
-      email: 'david.kim@tribly.com',
-      role: 'team',
-      department: 'Sales',
-      jobTitle: 'Sales Representative',
-      isActive: false,
-      avatar: '',
-      performance: {
-        businessesOnboarded: 19,
-        totalRevenue: 45000,
-        conversionRate: 65,
-        averageOnboardingTime: 4.1,
-        monthlyTarget: 8,
-        monthlyAchieved: 5
-      },
-      lastActiveAt: new Date('2024-01-10T14:20:00'),
-      createdAt: new Date('2023-11-05'),
-      assignedBusinesses: 12
-    }
-  ]);
+  // Team members data - in a real app, this would come from an API
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
   // API hooks for data fetching
   const { data: apiTeamMembers, loading: membersLoading, execute: fetchMembers } = useApi({
@@ -231,14 +146,14 @@ export default function TeamOverviewPage() {
       await updateMember(async () => {
         // In a real app, this would call the API
         // await teamApi.update(editingMember.id, editFormData);
-        
+
         // For now, update local state
-        setTeamMembers(prev => prev.map(member => 
-          member.id === editingMember.id 
+        setTeamMembers(prev => prev.map(member =>
+          member.id === editingMember.id
             ? { ...member, ...editFormData }
             : member
         ));
-        
+
         return { success: true };
       });
 
@@ -269,10 +184,10 @@ export default function TeamOverviewPage() {
                            member.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
       const matchesRole = filterRole === 'all' || member.role === filterRole;
       const matchesDepartment = filterDepartment === 'all' || member.department === filterDepartment;
-      const matchesStatus = filterStatus === 'all' || 
+      const matchesStatus = filterStatus === 'all' ||
                            (filterStatus === 'active' && member.isActive) ||
                            (filterStatus === 'inactive' && !member.isActive);
-      
+
       return matchesSearch && matchesRole && matchesDepartment && matchesStatus;
     });
   }, [teamMembers, debouncedSearchTerm, filterRole, filterDepartment, filterStatus]);
@@ -352,9 +267,9 @@ export default function TeamOverviewPage() {
       label: 'Actions',
       render: (value: any, row: TeamMember) => (
         <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="h-8 w-8 p-0"
             onClick={() => handleEditMember(row)}
           >
@@ -375,22 +290,22 @@ export default function TeamOverviewPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header Section */}
         <div className="flex gap-[7px] items-start mb-12">
-          <button 
+          <button
             onClick={() => router.back()}
             className="flex items-center justify-center shrink-0 size-[32px] hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
             aria-label="Go back"
           >
-            <svg 
-              width="32" 
-              height="32" 
-              viewBox="0 0 32 32" 
-              fill="none" 
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 32 32"
+              fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path 
-                fillRule="evenodd" 
-                clipRule="evenodd" 
-                d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z" 
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z"
                 fill="#0D0D0D"
               />
             </svg>
@@ -695,11 +610,11 @@ export default function TeamOverviewPage() {
                         </span>
                       </div>
                     </div>
-                    
+
                     {/* Edit Button */}
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="h-8 px-3 text-xs"
                       onClick={() => handleEditMember(member)}
                     >
@@ -780,8 +695,8 @@ export default function TeamOverviewPage() {
               <Label htmlFor="department" className="text-right">
                 Department
               </Label>
-              <Select 
-                value={editFormData.department} 
+              <Select
+                value={editFormData.department}
                 onValueChange={(value) => setEditFormData(prev => ({ ...prev, department: value }))}
               >
                 <SelectTrigger className="col-span-3">
@@ -800,8 +715,8 @@ export default function TeamOverviewPage() {
               <Label htmlFor="role" className="text-right">
                 Role
               </Label>
-              <Select 
-                value={editFormData.role} 
+              <Select
+                value={editFormData.role}
                 onValueChange={(value) => setEditFormData(prev => ({ ...prev, role: value }))}
               >
                 <SelectTrigger className="col-span-3">
@@ -818,8 +733,8 @@ export default function TeamOverviewPage() {
               <Label htmlFor="status" className="text-right">
                 Status
               </Label>
-              <Select 
-                value={editFormData.isActive ? 'active' : 'inactive'} 
+              <Select
+                value={editFormData.isActive ? 'active' : 'inactive'}
                 onValueChange={(value) => setEditFormData(prev => ({ ...prev, isActive: value === 'active' }))}
               >
                 <SelectTrigger className="col-span-3">

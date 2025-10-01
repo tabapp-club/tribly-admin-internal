@@ -6,7 +6,7 @@ export function testLocalStorageFix() {
   console.log('Testing localStorage fix...');
 
   // Test 1: Store a plain string token
-  localStorage.setItem('test_token', 'mock_token');
+  localStorage.setItem('test_token', 'test_token_123');
   const retrievedToken = localStorage.getItem('test_token');
   console.log('Test 1 - Plain string token:', retrievedToken);
 

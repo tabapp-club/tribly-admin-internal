@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { businessApi } from '@/utils/api';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ImprovedInput } from '@/components/ui/ImprovedInput';
@@ -21,21 +22,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  Building2,
   User,
   Mail,
   Phone,
-  MapPin,
   Globe,
   CheckCircle,
-  Users,
-  DollarSign,
-  Target,
-  Calendar,
-  Clock,
   AlertCircle,
   FileText,
-  CreditCard,
   UserCheck,
   ChevronDown,
   Briefcase,
@@ -44,20 +37,16 @@ import {
   Settings,
   Send,
   Loader2,
-  Save,
   AlertTriangle,
-  X,
   Plus,
-  Trash2,
-  Eye,
-  EyeOff
+  Trash2
 } from 'lucide-react';
 
 interface TabItem {
   id: string;
   title: string;
   description: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
   completed: boolean;
 }
 
@@ -76,6 +65,9 @@ interface FormData {
   gstNumber: string;
   panNumber: string;
   businessRegistrationNumber: string;
+  registrationNumber: string;
+  taxId: string;
+  incorporationDate: string;
   posSystem: string;
   posProvider: string;
   posVersion: string;
@@ -83,6 +75,8 @@ interface FormData {
   serialNumber: string;
   installationDate: string;
   licenseKey: string;
+  accountingSoftware: string;
+  integrationNotes: string;
   pocName: string;
   pocEmail: string;
   pocPhone: string;
@@ -163,6 +157,9 @@ export default function BusinessOnboardingPage() {
     gstNumber: '',
     panNumber: '',
     businessRegistrationNumber: '',
+    registrationNumber: '',
+    taxId: '',
+    incorporationDate: '',
 
     // POS System Details
     posSystem: '',
@@ -172,6 +169,8 @@ export default function BusinessOnboardingPage() {
     serialNumber: '',
     installationDate: '',
     licenseKey: '',
+    accountingSoftware: '',
+    integrationNotes: '',
 
     // Primary POC Details
     pocName: '',
@@ -196,12 +195,10 @@ export default function BusinessOnboardingPage() {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showFailedModal, setShowFailedModal] = useState(false);
-  const [isFormValid, setIsFormValid] = useState(false);
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const formRef = useRef<HTMLFormElement>(null);
 
-  const tabs: TabItem[] = [
+  const tabs: TabItem[] = useMemo(() => [
     {
       id: 'basic-info',
       title: 'Basic information',
@@ -251,7 +248,7 @@ export default function BusinessOnboardingPage() {
       icon: Send,
       completed: false // This tab is always accessible after account creation
     }
-  ];
+  ], [formData]);
 
   const businessTypes = [
     'Retail', 'Restaurant', 'Services', 'Manufacturing', 'Wholesale', 'E-commerce', 'Consulting', 'Other'
@@ -275,85 +272,85 @@ export default function BusinessOnboardingPage() {
         if (value.trim().length < 2) return 'Brand name must be at least 2 characters';
         if (value.trim().length > 100) return 'Brand name must be less than 100 characters';
         return null;
-      
+
       case 'businessType':
         if (typeof value !== 'string') return 'Invalid value type';
         if (!value) return 'Business type is required';
         return null;
-      
+
       case 'website':
         if (typeof value !== 'string') return 'Invalid value type';
         if (value && !validateURL(value)) return 'Please enter a valid website URL';
         return null;
-      
+
       case 'description':
         if (typeof value !== 'string') return 'Invalid value type';
         if (value && value.length > 500) return 'Description must be less than 500 characters';
         return null;
-      
+
       case 'streetAddress':
         if (typeof value !== 'string') return 'Invalid value type';
         if (!value.trim()) return 'Street address is required';
         if (value.trim().length < 5) return 'Street address must be at least 5 characters';
         return null;
-      
+
       case 'city':
         if (typeof value !== 'string') return 'Invalid value type';
         if (!value.trim()) return 'City is required';
         if (value.trim().length < 2) return 'City must be at least 2 characters';
         return null;
-      
+
       case 'state':
         if (typeof value !== 'string') return 'Invalid value type';
         if (!value.trim()) return 'State is required';
         if (value.trim().length < 2) return 'State must be at least 2 characters';
         return null;
-      
+
       case 'zipCode':
         if (typeof value !== 'string') return 'Invalid value type';
         if (!value.trim()) return 'ZIP code is required';
         if (!/^\d{5,6}$/.test(value.trim())) return 'Please enter a valid ZIP code';
         return null;
-      
+
       case 'country':
         if (typeof value !== 'string') return 'Invalid value type';
         if (!value) return 'Country is required';
         return null;
-      
+
       case 'gstNumber':
         if (typeof value !== 'string') return 'Invalid value type';
         if (value && !validateGST(value)) return 'Please enter a valid GST number';
         return null;
-      
+
       case 'panNumber':
         if (typeof value !== 'string') return 'Invalid value type';
         if (value && !validatePAN(value)) return 'Please enter a valid PAN number';
         return null;
-      
+
       case 'pocName':
         if (typeof value !== 'string') return 'Invalid value type';
         if (!value.trim()) return 'POC name is required';
         if (value.trim().length < 2) return 'POC name must be at least 2 characters';
         return null;
-      
+
       case 'pocEmail':
         if (typeof value !== 'string') return 'Invalid value type';
         if (!value.trim()) return 'POC email is required';
         if (!validateEmail(value)) return 'Please enter a valid email address';
         return null;
-      
+
       case 'pocPhone':
         if (typeof value !== 'string') return 'Invalid value type';
         if (!value.trim()) return 'POC phone is required';
         if (!validatePhone(value)) return 'Please enter a valid phone number';
         return null;
-      
+
       case 'pocDesignation':
         if (typeof value !== 'string') return 'Invalid value type';
         if (!value.trim()) return 'POC designation is required';
         if (value.trim().length < 2) return 'POC designation must be at least 2 characters';
         return null;
-      
+
       case 'businessEmails':
         if (!Array.isArray(value)) return 'Invalid value type';
         if (value.length === 0 || !value.some(email => email.trim())) return 'At least one business email is required';
@@ -361,7 +358,7 @@ export default function BusinessOnboardingPage() {
           if (email.trim() && !validateEmail(email)) return 'Please enter a valid email address';
         }
         return null;
-      
+
       case 'businessPhones':
         if (!Array.isArray(value)) return 'Invalid value type';
         if (value.length === 0 || !value.some(phone => phone.trim())) return 'At least one business phone is required';
@@ -369,7 +366,7 @@ export default function BusinessOnboardingPage() {
           if (phone.trim() && !validatePhone(phone)) return 'Please enter a valid phone number';
         }
         return null;
-      
+
       default:
         return null;
     }
@@ -382,7 +379,7 @@ export default function BusinessOnboardingPage() {
 
     // Required fields validation
     const requiredFields = [
-      'brandName', 'businessType', 'businessEmails', 'businessPhones', 'streetAddress', 'city', 'state', 
+      'brandName', 'businessType', 'businessEmails', 'businessPhones', 'streetAddress', 'city', 'state',
       'zipCode', 'country', 'pocName', 'pocEmail', 'pocPhone', 'pocDesignation'
     ];
 
@@ -409,15 +406,15 @@ export default function BusinessOnboardingPage() {
     });
 
     setValidationErrors(errors);
-    setIsFormValid(isValid);
     return isValid;
   }, [formData, validateField]);
+
 
   // Enhanced input change handler with validation
   const handleInputChange = useCallback((field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setTouchedFields(prev => new Set([...prev, field]));
-    
+
     // Clear error for this field
     if (validationErrors[field]) {
       setValidationErrors(prev => {
@@ -434,7 +431,7 @@ export default function BusinessOnboardingPage() {
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current);
     }
-    
+
     autoSaveTimeoutRef.current = setTimeout(() => {
       handleAutoSave();
     }, 2000);
@@ -447,7 +444,7 @@ export default function BusinessOnboardingPage() {
       [field]: prev[field].map((item, i) => i === index ? value : item)
     }));
     setTouchedFields(prev => new Set([...prev, field]));
-    
+
     // Clear error for this field
     if (validationErrors[field]) {
       setValidationErrors(prev => {
@@ -464,7 +461,7 @@ export default function BusinessOnboardingPage() {
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current);
     }
-    
+
     autoSaveTimeoutRef.current = setTimeout(() => {
       handleAutoSave();
     }, 2000);
@@ -500,7 +497,7 @@ export default function BusinessOnboardingPage() {
     try {
       // Simulate API call for auto-save
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       setAutoSaveState(prev => ({
         ...prev,
         hasUnsavedChanges: false,
@@ -514,7 +511,7 @@ export default function BusinessOnboardingPage() {
         type: 'success',
         isRead: false
       });
-    } catch (error) {
+    } catch {
       addNotification({
         title: 'Auto-save Failed',
         message: 'Failed to save your progress. Please try again.',
@@ -528,9 +525,14 @@ export default function BusinessOnboardingPage() {
 
   // Enhanced submit handler
   const handleSubmit = useCallback(async () => {
-    console.log('handleSubmit called');
-    if (!validateForm()) {
-      console.log('Form validation failed');
+    console.log('🚀 handleSubmit called');
+    console.log('📋 Current form data:', formData);
+
+    const isValid = validateForm();
+    console.log('✅ Form validation result:', isValid);
+
+    if (!isValid) {
+      console.log('❌ Form validation failed');
       addNotification({
         title: 'Validation Error',
         message: 'Please fix all validation errors before submitting.',
@@ -540,48 +542,119 @@ export default function BusinessOnboardingPage() {
       return;
     }
 
-    console.log('Form validation passed, starting submission');
+    console.log('✅ Form validation passed, starting submission');
     setLoadingState(prev => ({ ...prev, submitting: true }));
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Create business object from form data
-      const newBusiness = {
-        id: Date.now(), // Simple ID generation
-        name: formData.brandName,
-        industry: formData.businessType,
-        status: 'active' as const,
-        userType: 'trial' as const, // Default to trial for new businesses
-        subscription: 'Individual', // Default subscription
-        revenue: 0,
-        users: 1, // Default to 1 user (the POC)
-        onboardedAt: new Date().toISOString().split('T')[0],
-        lastActivity: 'Just now',
-        assignedTo: formData.pocName,
-        features: ['Tribly AI for Business'], // Default features
-        growthRate: 0,
-        mrr: 0,
-        churnRisk: 'low' as const
+      // Prepare business data for API according to AdminCreateUserBusiness model
+      const businessData = {
+        user: {
+          phone_number: formData.pocPhone.replace(/\D/g, '').slice(-10), // Extract last 10 digits
+          name: formData.pocName,
+          email: formData.pocEmail,
+          user_type: 'admin',
+          country_code: '+91' // Default to +91, can be made dynamic later
+        },
+        business: {
+          name: formData.brandName,
+          business_type: formData.businessType,
+          website: formData.website || null,
+          description: formData.description || null,
+          business_email_id: formData.businessEmails.find(email => email.trim()) || null,
+          business_phone_numbers: formData.businessPhones.filter(phone => phone.trim()),
+          street: formData.streetAddress || null,
+          city: formData.city || null,
+          state: formData.state || null,
+          zipcode: formData.zipCode || null,
+          country: formData.country || null,
+          gst: formData.gstNumber || null,
+          pan: formData.panNumber || null,
+          registration_number: formData.businessRegistrationNumber || formData.registrationNumber || null,
+          timezone: 'UTC',
+          industry: formData.businessType,
+          configuration: null
+        },
+        pos: {
+          pos_system: formData.posSystem || null,
+          pos_provider: formData.posProvider || null,
+          pos_version: formData.posVersion || null,
+          pos_terminal_id: formData.terminalId || null,
+          pos_serial_no: formData.serialNumber || null,
+          pos_date: formData.installationDate || null,
+          pos_license_key: formData.licenseKey || null
+        }
       };
 
-      // Save to localStorage
+      console.log('📤 Sending business data to API:', businessData);
+      console.log('🌐 API Base URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api');
+
+      let response;
+      let apiSuccess = false;
+
       try {
-        const existingBusinesses = localStorage.getItem('onboardedBusinesses');
-        const businesses = existingBusinesses ? JSON.parse(existingBusinesses) : [];
-        businesses.push(newBusiness);
-        localStorage.setItem('onboardedBusinesses', JSON.stringify(businesses));
-        
-        // Dispatch custom event to notify other components
-        window.dispatchEvent(new CustomEvent('businessCreated', { detail: newBusiness }));
-      } catch (error) {
-        console.error('Error saving business to localStorage:', error);
+        // Call the business creation API
+        console.log('🔄 Calling businessApi.createBusiness...');
+        response = await businessApi.createBusiness(businessData);
+        console.log('📥 API Response received:', response);
+        apiSuccess = true;
+      } catch (apiError) {
+        console.warn('⚠️ API call failed, falling back to local storage:', apiError);
+        // API call failed, throw error instead of creating mock response
+        throw apiError;
       }
-      
+
+      if (response.data) {
+        console.log('✅ Business created successfully:', response.data);
+
+        // Save to localStorage for local state management
+        try {
+          const existingBusinesses = localStorage.getItem('onboardedBusinesses');
+          const businesses = existingBusinesses ? JSON.parse(existingBusinesses) : [];
+
+          // Create a local business object for UI display
+          const localBusiness = {
+            id: (response.data as { id?: string | number })?.id || Date.now(),
+            name: businessData.business.name,
+            industry: businessData.business.industry,
+            status: 'active',
+            userType: 'trial',
+            subscription: 'Individual',
+            revenue: 0,
+            users: 1,
+            onboardedAt: new Date().toISOString().split('T')[0],
+            lastActivity: 'Just now',
+            assignedTo: businessData.user.name,
+            features: ['Tribly AI for Business'],
+            growthRate: 0,
+            mrr: 0,
+            churnRisk: 'low'
+          };
+
+          businesses.push(localBusiness);
+          localStorage.setItem('onboardedBusinesses', JSON.stringify(businesses));
+
+          // Dispatch custom event to notify other components
+          window.dispatchEvent(new CustomEvent('businessCreated', { detail: localBusiness }));
+
+          // Show appropriate notification based on API success
+          if (!apiSuccess) {
+            addNotification({
+              title: 'Business Created (Offline Mode)',
+              message: 'Business created successfully and saved locally. API connection unavailable.',
+              type: 'warning',
+              isRead: false
+            });
+          }
+        } catch (error) {
+          console.error('Error saving business to localStorage:', error);
+        }
+      } else {
+        throw new Error('No data returned from API');
+      }
+
       addNotification({
         title: 'Business Onboarded Successfully!',
-        message: `${formData.brandName} has been successfully onboarded and is ready to use.`,
+        message: `${businessData.business.name} has been successfully onboarded and is ready to use.`,
         type: 'success',
         isRead: false
       });
@@ -591,30 +664,28 @@ export default function BusinessOnboardingPage() {
       setShowSubmitDialog(false);
       setShowSuccessModal(true);
     } catch (error) {
+      console.error('❌ Submission error:', error);
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        error
+      });
       addNotification({
         title: 'Submission Failed',
         message: 'Failed to submit the form. Please try again.',
         type: 'error',
         isRead: false
       });
-      
+
       // Show failed modal
-      console.log('Showing failed modal');
+      console.log('❌ Showing failed modal');
       setShowFailedModal(true);
     } finally {
       setLoadingState(prev => ({ ...prev, submitting: false }));
       setShowSubmitDialog(false);
     }
-  }, [formData, validateForm, addNotification, router]);
+  }, [formData, validateForm, addNotification]);
 
-  // Handle exit with unsaved changes
-  const handleExit = useCallback(() => {
-    if (autoSaveState.hasUnsavedChanges) {
-      setShowExitDialog(true);
-    } else {
-      router.back();
-    }
-  }, [autoSaveState.hasUnsavedChanges, router]);
 
   // Confirm exit
   const confirmExit = useCallback(() => {
@@ -624,9 +695,20 @@ export default function BusinessOnboardingPage() {
 
   // Confirm submit
   const confirmSubmit = useCallback(() => {
-    console.log('confirmSubmit called, showing submit dialog');
+    console.log('🔔 confirmSubmit called, showing submit dialog');
+    console.log('🔍 Form validation before submit:', {
+      isValid: validateForm(),
+      formData: {
+        brandName: formData.brandName,
+        businessType: formData.businessType,
+        pocName: formData.pocName,
+        pocEmail: formData.pocEmail,
+        pocPhone: formData.pocPhone,
+        pocDesignation: formData.pocDesignation
+      }
+    });
     setShowSubmitDialog(true);
-  }, []);
+  }, [formData, validateForm]);
 
   // Cancel submit
   const cancelSubmit = useCallback(() => {
@@ -637,7 +719,7 @@ export default function BusinessOnboardingPage() {
   const isCurrentTabValid = useCallback((): boolean => {
     const currentTab = tabs.find(tab => tab.id === activeTab);
     if (!currentTab) return false;
-    
+
     // Only check fields that are actually marked as required in the form
     switch (activeTab) {
       case 'basic-info':
@@ -671,7 +753,7 @@ export default function BusinessOnboardingPage() {
       default:
         return false;
     }
-  }, [activeTab, formData]);
+  }, [activeTab, formData, tabs]);
 
   // Handle success modal action
   const handleSuccessModalAction = useCallback(() => {
@@ -701,6 +783,9 @@ export default function BusinessOnboardingPage() {
       gstNumber: '',
       panNumber: '',
       businessRegistrationNumber: '',
+      registrationNumber: '',
+      taxId: '',
+      incorporationDate: '',
       posSystem: '',
       posProvider: '',
       posVersion: '',
@@ -708,6 +793,8 @@ export default function BusinessOnboardingPage() {
       serialNumber: '',
       installationDate: '',
       licenseKey: '',
+      accountingSoftware: '',
+      integrationNotes: '',
       pocName: '',
       pocEmail: '',
       pocPhone: '',
@@ -754,7 +841,7 @@ export default function BusinessOnboardingPage() {
   const renderInput = (field: string, label: string, type: string = 'text', placeholder: string = '', required: boolean = false, icon?: React.ReactNode) => {
     const hasError = validationErrors[field];
     const isTouched = touchedFields.has(field);
-    
+
     return (
       <ImprovedInput
         id={field}
@@ -775,7 +862,7 @@ export default function BusinessOnboardingPage() {
   const renderTextarea = (field: string, label: string, placeholder: string = '', required: boolean = false, maxLength?: number) => {
     const hasError = validationErrors[field];
     const isTouched = touchedFields.has(field);
-    
+
     return (
       <ImprovedTextarea
         id={field}
@@ -795,11 +882,11 @@ export default function BusinessOnboardingPage() {
   const renderSelect = (field: string, label: string, options: string[], placeholder: string = '', required: boolean = false) => {
     const hasError = validationErrors[field];
     const isTouched = touchedFields.has(field);
-    
+
     return (
       <div className="space-y-2">
-        <label 
-          htmlFor={field} 
+        <label
+          htmlFor={field}
           className={`block text-sm font-medium text-gray-700 transition-colors duration-200 ${
             hasError && isTouched ? 'text-red-700' : ''
           }`}
@@ -807,13 +894,13 @@ export default function BusinessOnboardingPage() {
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
-        <Select 
-          value={typeof formData[field as keyof FormData] === 'string' ? formData[field as keyof FormData] as string : ''} 
+        <Select
+          value={typeof formData[field as keyof FormData] === 'string' ? formData[field as keyof FormData] as string : ''}
           onValueChange={(value) => handleInputChange(field, value)}
         >
           <SelectTrigger className={`h-11 rounded-[4px] transition-all duration-200 ease-in-out ${
-            hasError && isTouched 
-              ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+            hasError && isTouched
+              ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
               : 'hover:border-gray-400 focus:border-blue-500 focus:ring-blue-500'
           }`}>
             <SelectValue placeholder={placeholder} />
@@ -1072,21 +1159,36 @@ export default function BusinessOnboardingPage() {
   };
 
   const handleNext = () => {
-    console.log('handleNext called, activeTab:', activeTab);
+    console.log('🔄 handleNext called, activeTab:', activeTab);
+    console.log('🔍 Button state check:', {
+      submitting: loadingState.submitting,
+      validating: loadingState.validating,
+      isCurrentTabValid: isCurrentTabValid(),
+      formData: {
+        brandName: formData.brandName,
+        businessType: formData.businessType,
+        pocName: formData.pocName,
+        pocEmail: formData.pocEmail,
+        pocPhone: formData.pocPhone,
+        pocDesignation: formData.pocDesignation
+      }
+    });
+
     const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
-    console.log('Current index:', currentIndex, 'Total tabs:', tabs.length);
-    
+    console.log('📍 Current index:', currentIndex, 'Total tabs:', tabs.length);
+
     // If we're on the primary-poc tab, trigger account creation
     if (activeTab === 'primary-poc') {
-      console.log('Primary POC tab - calling confirmSubmit for account creation');
+      console.log('🎯 Primary POC tab - calling confirmSubmit for account creation');
       confirmSubmit();
       return;
     }
-    
+
     if (currentIndex < tabs.length - 1) {
+      console.log('➡️ Moving to next tab');
       setActiveTab(tabs[currentIndex + 1].id);
     } else {
-      console.log('Calling confirmSubmit');
+      console.log('🏁 Last tab - calling confirmSubmit');
       confirmSubmit();
     }
   };
@@ -1096,22 +1198,22 @@ export default function BusinessOnboardingPage() {
       <div className="max-w-7xl mx-auto w-full">
         {/* Header Section */}
         <div className="flex gap-[7px] items-start mb-12">
-          <button 
+          <button
             onClick={handleBack}
             className="flex items-center justify-center shrink-0 size-[32px] hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
             aria-label="Go back"
           >
-            <svg 
-              width="32" 
-              height="32" 
-              viewBox="0 0 32 32" 
-              fill="none" 
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 32 32"
+              fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path 
-                fillRule="evenodd" 
-                clipRule="evenodd" 
-                d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z" 
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z"
                 fill="#0D0D0D"
               />
             </svg>
@@ -1146,7 +1248,7 @@ export default function BusinessOnboardingPage() {
 
             {/* Progress Bar */}
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
+              <div
                 className="bg-[#6E4EFF] h-2 rounded-full transition-all duration-300"
                 style={{ width: `${((tabs.findIndex(tab => tab.id === activeTab) + 1) / tabs.length) * 100}%` }}
               ></div>
@@ -1230,7 +1332,7 @@ export default function BusinessOnboardingPage() {
                   </div>
 
             {renderTabContent()}
-            
+
             {/* Navigation Buttons - Hide for Documents & Welcome Kit tab and Mobile */}
             {activeTab !== 'agreements-welcome' && (
               <div className="hidden lg:flex flex-col sm:flex-row gap-4 mt-8">
@@ -1240,25 +1342,25 @@ export default function BusinessOnboardingPage() {
                     onClick={handleTabBack}
                     className="bg-gray-100 box-border flex gap-[8px] h-[48px] items-center justify-center px-[16px] py-[12px] rounded-[4px] w-full sm:w-[120px] hover:bg-gray-200 transition-colors border border-gray-300"
                   >
-                    <svg 
-                      width="16" 
-                      height="16" 
-                      viewBox="0 0 32 32" 
-                      fill="none" 
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 32 32"
+                      fill="none"
                       xmlns="http://www.w3.org/2000/svg"
                       className="text-gray-600"
                     >
-                      <path 
-                        fillRule="evenodd" 
-                        clipRule="evenodd" 
-                        d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z" 
+                      <path
+                        fillRule="evenodd"
+                        clipRule="evenodd"
+                        d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z"
                         fill="currentColor"
                       />
                     </svg>
                     <span className="text-gray-700 font-medium">Back</span>
                   </button>
                 )}
-                
+
                 {/* Auto-save Status */}
                 <div className="flex items-center gap-2 flex-1">
                   <div className="flex items-center gap-2">
@@ -1287,10 +1389,19 @@ export default function BusinessOnboardingPage() {
                     </Badge>
                   )}
             </div>
-                
+
                 {/* Next Button */}
                 <button
-                  onClick={handleNext}
+                  onClick={(e) => {
+                    console.log('🖱️ Button clicked!', {
+                      activeTab,
+                      isDisabled: loadingState.submitting || loadingState.validating || !isCurrentTabValid(),
+                      submitting: loadingState.submitting,
+                      validating: loadingState.validating,
+                      isValid: isCurrentTabValid()
+                    });
+                    handleNext();
+                  }}
                   disabled={loadingState.submitting || loadingState.validating || !isCurrentTabValid()}
                   className="bg-[#6E4EFF] box-border flex gap-[8px] h-[48px] items-center justify-center px-[16px] py-[12px] rounded-[4px] w-full sm:w-[218px] hover:bg-[#7856FF] transition-colors sm:ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -1326,17 +1437,17 @@ export default function BusinessOnboardingPage() {
                 disabled={tabs.findIndex(tab => tab.id === activeTab) === 0}
                 className="flex items-center gap-2 px-6 py-3 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 rounded-lg"
           >
-            <svg 
-              width="16" 
-              height="16" 
-              viewBox="0 0 32 32" 
-              fill="none" 
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 32 32"
+              fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path 
-                fillRule="evenodd" 
-                clipRule="evenodd" 
-                d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z" 
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z"
                 fill="currentColor"
               />
             </svg>
@@ -1344,7 +1455,16 @@ export default function BusinessOnboardingPage() {
               </button>
 
               <button
-              onClick={handleNext}
+              onClick={(e) => {
+                console.log('🖱️ Second Button clicked!', {
+                  activeTab,
+                  isDisabled: activeTab === 'agreements-welcome' || loadingState.submitting || loadingState.validating || !isCurrentTabValid(),
+                  submitting: loadingState.submitting,
+                  validating: loadingState.validating,
+                  isValid: isCurrentTabValid()
+                });
+                handleNext();
+              }}
                 disabled={activeTab === 'agreements-welcome' || loadingState.submitting || loadingState.validating || !isCurrentTabValid()}
                 className="flex items-center gap-2 px-6 py-3 bg-[#6E4EFF] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex-1 justify-center hover:bg-[#7856FF] transition-colors"
               >
@@ -1363,17 +1483,17 @@ export default function BusinessOnboardingPage() {
                     <span className="text-sm font-medium">
                       {activeTab === 'primary-poc' ? 'Create Account' : 'Next'}
                     </span>
-              <svg 
-                width="16" 
-                height="16" 
-                viewBox="0 0 32 32" 
-                fill="none" 
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 32 32"
+                fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path 
-                  fillRule="evenodd" 
-                  clipRule="evenodd" 
-                  d="M28.8545 16.0001C28.0812 16.5332 26.8287 17.8511 25.8945 19.1469C24.7268 20.7668 24.0615 21.8096 23.6813 22.9082L22.1063 21.8471C22.2602 21.2016 23.0187 19.3706 24.8219 17.2106L3.14527 17.2106L3.14527 16.0001L28.8545 16.0001ZM28.8545 15.9999C28.0812 15.4668 26.8287 14.1489 25.8945 12.8531C24.7268 11.2332 24.0615 10.1904 23.6813 9.0918L22.1063 10.1529C22.2602 10.7984 23.0187 12.6294 24.8219 14.7894L3.14527 14.7894L3.14527 15.9999L28.8545 15.9999Z" 
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M28.8545 16.0001C28.0812 16.5332 26.8287 17.8511 25.8945 19.1469C24.7268 20.7668 24.0615 21.8096 23.6813 22.9082L22.1063 21.8471C22.2602 21.2016 23.0187 19.3706 24.8219 17.2106L3.14527 17.2106L3.14527 16.0001L28.8545 16.0001ZM28.8545 15.9999C28.0812 15.4668 26.8287 14.1489 25.8945 12.8531C24.7268 11.2332 24.0615 10.1904 23.6813 9.0918L22.1063 10.1529C22.2602 10.7984 23.0187 12.6294 24.8219 14.7894L3.14527 14.7894L3.14527 15.9999L28.8545 15.9999Z"
                   fill="currentColor"
                 />
               </svg>
@@ -1393,7 +1513,7 @@ export default function BusinessOnboardingPage() {
                 Unsaved Changes
               </AlertDialogTitle>
               <AlertDialogDescription>
-                You have unsaved changes that will be lost if you leave this page. 
+                You have unsaved changes that will be lost if you leave this page.
                 Your progress has been automatically saved as a draft, but you may want to complete the form first.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -1417,7 +1537,7 @@ export default function BusinessOnboardingPage() {
                 Confirm Submission
               </AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to submit the business onboarding form? 
+                Are you sure you want to submit the business onboarding form?
                 This will create the business account and send notifications to the team.
                 <br /><br />
                 <strong>Business:</strong> {formData.brandName || 'Unnamed Business'}
@@ -1429,8 +1549,21 @@ export default function BusinessOnboardingPage() {
               <AlertDialogCancel onClick={cancelSubmit}>
                 Review Again
               </AlertDialogCancel>
-              <AlertDialogAction 
-              onClick={handleSubmit}
+              <AlertDialogAction
+              onClick={(e) => {
+                console.log('🚀 Final Submit Button clicked!', {
+                  loadingState,
+                  formData: {
+                    brandName: formData.brandName,
+                    businessType: formData.businessType,
+                    pocName: formData.pocName,
+                    pocEmail: formData.pocEmail,
+                    pocPhone: formData.pocPhone,
+                    pocDesignation: formData.pocDesignation
+                  }
+                });
+                handleSubmit();
+              }}
                 className="bg-[#6E4EFF] hover:bg-[#7856FF]"
                 disabled={loadingState.submitting}
               >
@@ -1464,7 +1597,7 @@ export default function BusinessOnboardingPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-              <AlertDialogAction 
+              <AlertDialogAction
                 onClick={handleSuccessModalAction}
                 className="w-full bg-[#6E4EFF] hover:bg-[#7856FF] text-white"
               >
@@ -1492,7 +1625,7 @@ export default function BusinessOnboardingPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-              <AlertDialogAction 
+              <AlertDialogAction
                 onClick={handleFailedModalAction}
                 className="w-full bg-red-600 hover:bg-red-700 text-white"
               >

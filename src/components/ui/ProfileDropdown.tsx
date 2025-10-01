@@ -43,6 +43,7 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
   }, []);
 
   const getInitials = (name: string) => {
+    if (!name) return 'U';
     return name
       .split(' ')
       .map(n => n[0])
@@ -90,14 +91,48 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
     setIsOpen(false);
   };
 
-  // Mock user stats - in a real app, this would come from an API
+  // User stats - in a real app, this would come from an API
   const userStats = {
-    businessesManaged: 12,
-    teamMembers: 8,
-    accountAge: '2 years, 3 months'
+    businessesManaged: 0,
+    teamMembers: 0,
+    accountAge: 'New account'
   };
 
-  if (!user) return null;
+  // Early return if no user
+  if (!user || typeof user !== 'object') {
+    return null;
+  }
+
+  // Safely create user object with all required properties
+  const safeUser = {
+    name: user.name || 'User',
+    role: user.role || 'user',
+    email: user.email || '',
+    phone: user.phone || 'No phone number',
+    avatar: user.avatar || undefined,
+    createdAt: user.createdAt || new Date(),
+    jobTitle: user.jobTitle || '',
+    department: user.department || '',
+    permissions: (() => {
+      try {
+        if (Array.isArray(user.permissions)) {
+          return user.permissions;
+        }
+        if (user.permissions && typeof user.permissions === 'object') {
+          return Object.values(user.permissions);
+        }
+        return [];
+      } catch (error) {
+        console.warn('Error processing permissions:', error);
+        return [];
+      }
+    })()
+  };
+
+  // Final safety check for permissions
+  if (!Array.isArray(safeUser.permissions)) {
+    safeUser.permissions = [];
+  }
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
@@ -107,15 +142,15 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
         className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
       >
         <Avatar className="h-12 w-12">
-          <AvatarImage src={user.avatar} />
+          <AvatarImage src={safeUser.avatar} />
           <AvatarFallback className="bg-[#e9e9e9] text-[#2a2a2f]">
-            {getInitials(user.name)}
+            {getInitials(safeUser.name)}
           </AvatarFallback>
         </Avatar>
         <div className="flex flex-col items-start">
           <div className="flex items-center gap-2">
             <span className="text-[16px] font-bold text-black">
-              {user.name}
+              {safeUser.name}
             </span>
             {isOpen ? (
               <ChevronUp className="h-4 w-4 text-gray-500" />
@@ -123,156 +158,131 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
               <ChevronDown className="h-4 w-4 text-gray-500" />
             )}
           </div>
-          <span className="text-[12px] font-normal text-gray-600">
-            {getRoleDisplayName(user.role)}
-          </span>
+          <div className="flex items-center gap-2">
+            <Badge className={`${getRoleColor(safeUser.role)} text-xs`}>
+              {getRoleDisplayName(safeUser.role)}
+            </Badge>
+          </div>
         </div>
       </button>
 
-      {/* Desktop Dropdown Menu */}
+      {/* Dropdown Menu */}
       {isOpen && (
-        <div className="hidden lg:block absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
           {/* User Info Header */}
           <div className="p-4 border-b border-gray-100">
-            <div className="flex items-center gap-3 mb-3">
-              <Avatar className="h-14 w-14">
-                <AvatarImage src={user.avatar} />
+            <div className="flex items-center gap-3">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={safeUser.avatar} />
                 <AvatarFallback className="bg-[#e9e9e9] text-[#2a2a2f] text-lg">
-                  {getInitials(user.name)}
+                  {getInitials(safeUser.name)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 text-lg">{user.name}</h3>
-                <Badge className={`mt-1 ${getRoleColor(user.role)}`}>
-                  {getRoleDisplayName(user.role)}
+                <h3 className="font-semibold text-gray-900 text-lg">{safeUser.name}</h3>
+                <Badge className={`mt-1 ${getRoleColor(safeUser.role)}`}>
+                  {getRoleDisplayName(safeUser.role)}
                 </Badge>
               </div>
             </div>
-            
+
+            {/* User Details */}
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <Mail className="h-3 w-3" />
+                <span className="text-sm text-gray-600">{safeUser.email}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone className="h-3 w-3" />
+                <span className="text-sm text-gray-600">{safeUser.phone}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-3 w-3" />
+                <span className="text-sm text-gray-600">Member since {formatDate(safeUser.createdAt)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Shield className="h-3 w-3" />
+                <span className="text-sm text-gray-600">{safeUser.permissions.length} permissions</span>
+              </div>
+            </div>
           </div>
 
           {/* Navigation Menu */}
           <div className="p-2">
-            <div className="space-y-1">
-              {/* Profile Management */}
-              <button
-                onClick={handleProfileClick}
-                className="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-              >
-                <User className="h-4 w-4" />
-                <span>Profile Settings</span>
-              </button>
-
-
-              {/* Account Info */}
-              <div className="border-t border-gray-100 my-2"></div>
-              
-              <div className="px-3 py-2 text-xs text-gray-500 space-y-1">
-                <div className="flex items-center gap-2">
-                  <Phone className="h-3 w-3" />
-                  <span>{user.phone || 'No phone number'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-3 w-3" />
-                  <span>Member since {formatDate(user.createdAt)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Shield className="h-3 w-3" />
-                  <span>{user.permissions.length} permissions</span>
-                </div>
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 h-12 text-left"
+              onClick={handleProfileClick}
+            >
+              <User className="h-4 w-4" />
+              <div className="flex flex-col items-start">
+                <span className="font-medium">Profile Settings</span>
+                <span className="text-xs text-gray-500">Manage your account</span>
               </div>
+            </Button>
 
-              {/* Logout */}
-              <div className="border-t border-gray-100 my-2"></div>
-              
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-3 py-2 text-left text-red-600 hover:bg-red-50 rounded-md transition-colors"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Sign Out</span>
-              </button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 h-12 text-left"
+              onClick={() => {
+                router.push('/settings');
+                setIsOpen(false);
+              }}
+            >
+              <Key className="h-4 w-4" />
+              <div className="flex flex-col items-start">
+                <span className="font-medium">Security</span>
+                <span className="text-xs text-gray-500">Password & security</span>
+              </div>
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 h-12 text-left"
+              onClick={() => {
+                router.push('/analytics');
+                setIsOpen(false);
+              }}
+            >
+              <Database className="h-4 w-4" />
+              <div className="flex flex-col items-start">
+                <span className="font-medium">Analytics</span>
+                <span className="text-xs text-gray-500">View reports & data</span>
+              </div>
+            </Button>
+          </div>
+
+          {/* User Stats */}
+          <div className="p-4 border-t border-gray-100 bg-gray-50">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-lg font-bold text-gray-900">{userStats.businessesManaged}</div>
+                <div className="text-xs text-gray-500">Businesses</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-gray-900">{userStats.teamMembers}</div>
+                <div className="text-xs text-gray-500">Team Members</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-gray-900">{userStats.accountAge}</div>
+                <div className="text-xs text-gray-500">Account Age</div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Mobile Bottom Sheet */}
-      {isOpen && (
-        <div className="lg:hidden fixed inset-0 z-50">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setIsOpen(false)}
-          />
-          
-          {/* Bottom Sheet */}
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl transform transition-transform duration-300 ease-out">
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-2">
-              <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
-            </div>
-            
-            {/* User Info Header */}
-            <div className="px-6 py-4 border-b border-gray-100">
-              <div className="flex items-center gap-4 mb-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={user.avatar} />
-                  <AvatarFallback className="bg-[#e9e9e9] text-[#2a2a2f] text-xl">
-                    {getInitials(user.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 text-xl">{user.name}</h3>
-                  <Badge className={`mt-2 ${getRoleColor(user.role)}`}>
-                    {getRoleDisplayName(user.role)}
-                  </Badge>
-                </div>
+          {/* Logout Button */}
+          <div className="p-2 border-t border-gray-100">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 h-12 text-left text-red-600 hover:bg-red-50"
+              onClick={handleLogout}
+            >
+              <LogOut className="h-4 w-4" />
+              <div className="flex flex-col items-start">
+                <span className="font-medium">Sign Out</span>
+                <span className="text-xs text-gray-500">End your session</span>
               </div>
-            </div>
-
-            {/* Navigation Menu */}
-            <div className="px-4 py-4 max-h-96 overflow-y-auto">
-              <div className="space-y-2">
-                {/* Profile Management */}
-                <button
-                  onClick={handleProfileClick}
-                  className="w-full flex items-center gap-4 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
-                >
-                  <User className="h-5 w-5" />
-                  <span className="text-lg">Profile Settings</span>
-                </button>
-
-                {/* Account Info */}
-                <div className="border-t border-gray-100 my-4"></div>
-                
-                <div className="px-4 py-3 text-sm text-gray-500 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-4 w-4" />
-                    <span>{user.phone || 'No phone number'}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-4 w-4" />
-                    <span>Member since {formatDate(user.createdAt)}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Shield className="h-4 w-4" />
-                    <span>{user.permissions.length} permissions</span>
-                  </div>
-                </div>
-
-                {/* Logout */}
-                <div className="border-t border-gray-100 my-4"></div>
-                
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-4 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span className="text-lg">Sign Out</span>
-                </button>
-              </div>
-            </div>
+            </Button>
           </div>
         </div>
       )}

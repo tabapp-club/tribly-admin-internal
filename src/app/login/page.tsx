@@ -1,171 +1,105 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { Button } from '@/components/ui/button';
 import { ImprovedInput } from '@/components/ui/ImprovedInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, Smartphone, Shield } from 'lucide-react';
+import { Building2, Mail, Lock } from 'lucide-react';
+import { authApi } from '@/utils/api';
+
+interface LoginResponse {
+  message: string;
+  data: {
+    status: boolean;
+    token: string;
+  };
+}
 
 export default function LoginPage() {
-  const [mobileNumber, setMobileNumber] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [step, setStep] = useState<'mobile' | 'otp'>('mobile');
-  const [otpSent, setOtpSent] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  const { sendOTP, verifyOTP } = useAuth();
+  const { login, user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { addNotification } = useNotifications();
   const router = useRouter();
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Cleanup timer on unmount
+  // Redirect if already authenticated
   useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, []);
-
-  const startCountdown = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
+    if (isAuthenticated && !authLoading) {
+      console.log('User is authenticated, redirecting to dashboard');
+      router.push('/');
     }
-    
-    setCountdown(60);
-    timerRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
+  }, [isAuthenticated, authLoading, router]);
 
-  const handleSendOTP = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return; // Prevent multiple submissions
-    
+
     setIsLoading(true);
 
     try {
-      await sendOTP(mobileNumber);
-      setOtpSent(true);
-      setStep('otp');
-      setOtp(['', '', '', '', '', '']); // Reset OTP inputs
-      startCountdown();
+      // Call login API
+      const loginResponse = await authApi.login(email, password) as LoginResponse;
 
+      console.log('Login response:', loginResponse);
+
+      // Check if login was successful
+      if (loginResponse.data && loginResponse.data.status) {
+        const loginData = loginResponse.data;
+
+        if (loginData.status && loginData.token) {
+          // Store the token
+          localStorage.setItem('auth_token', loginData.token);
+
+          // Call /me API to get user details
+          try {
+            const meResponse = await authApi.getMe();
+            console.log('Me response:', meResponse);
+
+            if (meResponse.data) {
+              // Save user details to localStorage
+              localStorage.setItem('user_data', JSON.stringify(meResponse.data));
+              console.log('User data saved to localStorage');
+            }
+          } catch (meError) {
+            console.warn('Failed to fetch user details from /me API:', meError);
+            // Continue with login even if /me fails - user can still access the app
+          }
+
+          // Update auth context
+          console.log('Calling login context with:', email);
+          await login(email, password);
+          console.log('Login context completed');
+
+          // Check auth state after login
+          console.log('Auth state after login:', { user, isAuthenticated, isLoading: authLoading });
+
+          addNotification({
+            title: 'Welcome!',
+            message: 'You have successfully logged in.',
+            type: 'success',
+            isRead: false
+          });
+
+          console.log('Redirecting to dashboard');
+          // Small delay to ensure state updates
+          setTimeout(() => {
+            router.push('/');
+          }, 100);
+        } else {
+          throw new Error('Login failed - invalid credentials');
+        }
+      } else {
+        throw new Error('Invalid response format from server');
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Invalid email or password. Please try again.';
       addNotification({
-        title: 'OTP Sent!',
-        message: `Verification code sent to ${mobileNumber}`,
-        type: 'success',
-        isRead: false
-      });
-    } catch (error) {
-      addNotification({
-        title: 'Failed to Send OTP',
-        message: 'Please check your mobile number and try again.',
-        type: 'error',
-        isRead: false
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const otpString = otp.join('');
-    if (otpString.length !== 6 || isLoading) return;
-    
-    setIsLoading(true);
-
-    try {
-      await verifyOTP(mobileNumber, otpString);
-      addNotification({
-        title: 'Welcome!',
-        message: 'You have successfully logged in.',
-        type: 'success',
-        isRead: false
-      });
-      router.push('/');
-    } catch (error) {
-      addNotification({
-        title: 'Verification Failed',
-        message: 'Invalid OTP. Please try again.',
-        type: 'error',
-        isRead: false
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Auto-verify when OTP reaches 6 digits
-  useEffect(() => {
-    const otpString = otp.join('');
-    if (otpString.length === 6 && step === 'otp' && !isLoading) {
-      handleVerifyOTP();
-    }
-  }, [otp, step, isLoading]);
-
-  // Focus first OTP input when step changes to OTP
-  useEffect(() => {
-    if (step === 'otp') {
-      const firstInput = document.getElementById('otp-0');
-      firstInput?.focus();
-    }
-  }, [step]);
-
-  const handleOTPChange = (index: number, value: string) => {
-    if (value.length > 1) return; // Only allow single digit
-    
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      const nextInput = document.getElementById(`otp-${index + 1}`);
-      nextInput?.focus();
-    }
-  };
-
-  const handleOTPKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      // Move to previous input on backspace if current is empty
-      const prevInput = document.getElementById(`otp-${index - 1}`);
-      prevInput?.focus();
-    }
-  };
-
-  const handleResendOTP = async () => {
-    if (countdown > 0 || isLoading) return;
-    
-    setIsLoading(true);
-    try {
-      await sendOTP(mobileNumber);
-      setOtp(['', '', '', '', '', '']); // Reset OTP inputs
-      startCountdown();
-
-      addNotification({
-        title: 'OTP Resent!',
-        message: 'New verification code sent to your mobile number.',
-        type: 'success',
-        isRead: false
-      });
-    } catch (error) {
-      addNotification({
-        title: 'Failed to Resend OTP',
-        message: 'Please try again later.',
+        title: 'Login Failed',
+        message: errorMessage,
         type: 'error',
         isRead: false
       });
@@ -185,125 +119,58 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl font-bold">Tribly Admin</CardTitle>
           <CardDescription>
-            {step === 'mobile' 
-              ? 'Enter your mobile number to get started'
-              : 'Enter the verification code sent to your mobile'
-            }
+            Enter your credentials to access the admin dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {step === 'mobile' ? (
-            <form onSubmit={handleSendOTP} className="space-y-4">
-              <ImprovedInput
-                id="mobileNumber"
-                label="Mobile Number"
-                type="tel"
-                placeholder="+91 98765 43210"
-                value={mobileNumber}
-                onChange={(e) => setMobileNumber(e.target.value)}
-                icon={<Smartphone className="h-4 w-4" />}
-                required
-                validate={(value) => {
-                  if (!value) return 'Mobile number is required';
-                  
-                  // Clean the input (remove spaces, dashes, parentheses)
-                  const cleanNumber = value.replace(/[\s\-\(\)]/g, '');
-                  
-                  // Indian mobile number validation
-                  const indianMobileRegex = /^(\+91|91)?[6-9]\d{9}$/;
-                  
-                  if (!indianMobileRegex.test(cleanNumber)) {
-                    return 'Please enter a valid Indian mobile number (10 digits starting with 6-9)';
-                  }
-                  
-                  return null;
-                }}
-              />
+          <form onSubmit={handleLogin} className="space-y-4">
+            <ImprovedInput
+              id="email"
+              label="Email Address"
+              type="email"
+              placeholder="admin@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              icon={<Mail className="h-4 w-4" />}
+              required
+              validate={(value) => {
+                if (!value) return 'Email is required';
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Sending OTP...' : 'Send OTP'}
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyOTP} className="space-y-4">
-              <div className="text-center mb-4">
-                <p className="text-sm text-muted-foreground">
-                  We sent a 6-digit code to
-                </p>
-                <p className="font-medium">{mobileNumber}</p>
-              </div>
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(value)) {
+                  return 'Please enter a valid email address';
+                }
 
-              <div className="space-y-4">
-                <label className="text-sm font-medium text-foreground text-center block">
-                  Verification Code
-                </label>
-                <div className="flex justify-center gap-2" role="group" aria-label="OTP verification code">
-                  {otp.map((digit, index) => (
-                    <input
-                      key={index}
-                      id={`otp-${index}`}
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handleOTPChange(index, e.target.value.replace(/\D/g, ''))}
-                      onKeyDown={(e) => handleOTPKeyDown(index, e)}
-                      className="w-12 h-12 text-center text-lg font-semibold border border-input rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background"
-                      disabled={isLoading}
-                      aria-label={`OTP digit ${index + 1}`}
-                      autoComplete="one-time-code"
-                    />
-                  ))}
-                </div>
-              </div>
+                return null;
+              }}
+            />
 
-              {isLoading && (
-                <div className="text-center py-2">
-                  <p className="text-sm text-muted-foreground">Verifying OTP...</p>
-                </div>
-              )}
+            <ImprovedInput
+              id="password"
+              label="Password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              icon={<Lock className="h-4 w-4" />}
+              required
+              validate={(value) => {
+                if (!value) return 'Password is required';
+                if (value.length < 6) {
+                  return 'Password must be at least 6 characters long';
+                }
+                return null;
+              }}
+            />
 
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={handleResendOTP}
-                  disabled={countdown > 0 || isLoading}
-                  className="text-sm text-primary hover:text-primary/80 disabled:text-muted-foreground disabled:cursor-not-allowed"
-                >
-                  {countdown > 0 
-                    ? `Resend OTP in ${countdown}s`
-                    : 'Resend OTP'
-                  }
-                </button>
-              </div>
-
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStep('mobile');
-                    setOtp(['', '', '', '', '', '']);
-                    setOtpSent(false);
-                    setCountdown(0);
-                    if (timerRef.current) {
-                      clearInterval(timerRef.current);
-                      timerRef.current = null;
-                    }
-                  }}
-                  className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={isLoading}
-                >
-                  Change mobile number
-                </button>
-              </div>
-            </form>
-          )}
-
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Signing In...' : 'Sign In'}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

@@ -3,6 +3,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { businessApi } from '@/utils/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,7 +39,7 @@ import {
 } from 'lucide-react';
 
 interface Business {
-  id: number;
+  id: string;
   name: string;
   industry: string;
   status: 'active' | 'inactive' | 'onboarding';
@@ -57,6 +59,7 @@ interface Business {
 export default function BusinessOverviewClient() {
   const router = useRouter();
   const { user, hasRole } = useAuth();
+  const { addNotification } = useNotifications();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [userTypeFilter, setUserTypeFilter] = useState('all');
@@ -79,18 +82,150 @@ export default function BusinessOverviewClient() {
   // Load businesses from localStorage
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  // Load businesses from localStorage on component mount
+  // Helper function to map API response to component format
+  const mapApiBusinessToComponent = (apiBusiness: {
+    _id?: string;
+    id?: string;
+    name?: string;
+    industry?: string;
+    status?: string;
+    business_plan?: string;
+    created_at?: string;
+    owner_name?: string;
+    owner_email?: string;
+    owner_phone_number?: string;
+    gstin?: string;
+    pan?: string | null;
+    features?: { [key: string]: boolean };
+    is_deleted?: boolean;
+  }): Business => {
+    // Convert features object to array of enabled feature names
+    console.log('🔍 API features received:', apiBusiness.features);
+    const enabledFeatures = apiBusiness.features && typeof apiBusiness.features === 'object'
+      ? Object.entries(apiBusiness.features)
+          .filter(([, enabled]) => enabled === true)
+          .map(([feature]) => {
+            console.log('🔍 Processing feature:', feature, 'enabled:', true);
+            // Convert snake_case to readable format
+            const featureMap: { [key: string]: string } = {
+              'dashboard': 'Dashboard',
+              'data_center': 'Data Center',
+              'data_centre': 'Data Center', // Handle API's actual field name
+              'tribly_ai': 'Tribly AI',
+              'achievements': 'Achievements',
+              'cohorts': 'Cohorts',
+              'automation': 'Automation',
+              'campaigns': 'Campaigns'
+            };
+            const mappedFeature = featureMap[feature] || feature;
+            console.log('🔍 Mapped feature:', feature, '→', mappedFeature);
+            return mappedFeature;
+          })
+      : ['Tribly AI for Business']; // Default fallback
+
+    console.log('🔍 Final enabled features:', enabledFeatures);
+
+    // Map business_plan to userType
+    const getUserType = (plan: string) => {
+      switch (plan?.toLowerCase()) {
+        case 'trial':
+        case 'trail': // Handle typo in API
+          return 'trial' as const;
+        case 'paid':
+        case 'premium':
+        case 'pro':
+          return 'paid' as const;
+        case 'free':
+          return 'free' as const;
+        default:
+          return 'trial' as const;
+      }
+    };
+
+    const business: Business = {
+      id: apiBusiness._id || apiBusiness.id || Date.now().toString(),
+      name: apiBusiness.name || 'Unknown Business',
+      industry: apiBusiness.industry || 'Unknown',
+      status: (apiBusiness.status as 'active' | 'inactive' | 'onboarding') || 'active',
+      userType: getUserType(apiBusiness.business_plan || ''),
+      subscription: apiBusiness.business_plan || 'Individual',
+      revenue: 0, // Default value
+      users: 1, // Default value
+      onboardedAt: apiBusiness.created_at ? new Date(apiBusiness.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      lastActivity: 'Just now', // Default value
+      assignedTo: apiBusiness.owner_name || 'Unknown',
+      features: enabledFeatures,
+      growthRate: 0, // Default value
+      mrr: 0, // Default value
+      churnRisk: 'low' as const, // Default value
+    };
+
+    // Add additional fields for display (not part of Business interface)
+    (business as Business & { ownerEmail?: string; ownerPhone?: string; gstin?: string; pan?: string | null; businessPlan?: string; is_deleted?: boolean }).ownerEmail = apiBusiness.owner_email;
+    (business as Business & { ownerEmail?: string; ownerPhone?: string; gstin?: string; pan?: string | null; businessPlan?: string; is_deleted?: boolean }).ownerPhone = apiBusiness.owner_phone_number;
+    (business as Business & { ownerEmail?: string; ownerPhone?: string; gstin?: string; pan?: string | null; businessPlan?: string; is_deleted?: boolean }).gstin = apiBusiness.gstin;
+    (business as Business & { ownerEmail?: string; ownerPhone?: string; gstin?: string; pan?: string | null; businessPlan?: string; is_deleted?: boolean }).pan = apiBusiness.pan;
+    (business as Business & { ownerEmail?: string; ownerPhone?: string; gstin?: string; pan?: string | null; businessPlan?: string; is_deleted?: boolean }).businessPlan = apiBusiness.business_plan;
+    (business as Business & { ownerEmail?: string; ownerPhone?: string; gstin?: string; pan?: string | null; businessPlan?: string; is_deleted?: boolean }).is_deleted = apiBusiness.is_deleted || false;
+
+    return business;
+  };
+
+  // Load businesses from API and localStorage on component mount
   useEffect(() => {
-    const loadBusinesses = () => {
+    const loadBusinesses = async () => {
       try {
+        console.log('🔄 Loading businesses from API...');
+
+        // Try to fetch from API first
+        try {
+          const response = await businessApi.getOnboardedBusinesses();
+          console.log('📥 API Response:', response);
+
+          // Check if response is an array (API returns businesses array directly)
+          if (Array.isArray(response)) {
+            console.log('✅ Loaded businesses from API:', response);
+
+            // Map API response to component format
+            const mappedBusinesses = response.map(mapApiBusinessToComponent);
+
+            console.log('📊 Mapped businesses:', mappedBusinesses);
+            setBusinesses(mappedBusinesses);
+            return; // Success, exit early
+          } else if (response && response.data && Array.isArray(response.data)) {
+            // Fallback: check if response has data property
+            console.log('✅ Loaded businesses from API (with data property):', response.data);
+
+            // Map API response to component format
+            const mappedBusinesses = response.data.map(mapApiBusinessToComponent);
+
+            console.log('📊 Mapped businesses:', mappedBusinesses);
+            setBusinesses(mappedBusinesses);
+            return; // Success, exit early
+          }
+        } catch (apiError) {
+          console.warn('⚠️ API call failed, falling back to localStorage:', apiError);
+        }
+
+        // Fallback to localStorage if API fails
         const storedBusinesses = localStorage.getItem('onboardedBusinesses');
         if (storedBusinesses) {
-          const parsedBusinesses = JSON.parse(storedBusinesses);
-          setBusinesses(parsedBusinesses);
+          try {
+            const parsedBusinesses = JSON.parse(storedBusinesses);
+            console.log('📦 Loaded businesses from localStorage:', parsedBusinesses);
+            setBusinesses(Array.isArray(parsedBusinesses) ? parsedBusinesses : []);
+          } catch (parseError) {
+            console.error('❌ Error parsing businesses from localStorage:', parseError);
+            setBusinesses([]);
+          }
+        } else {
+          setBusinesses([]);
         }
       } catch (error) {
-        console.error('Error loading businesses from localStorage:', error);
+        console.error('❌ Error loading businesses:', error);
       } finally {
         setIsLoading(false);
       }
@@ -99,20 +234,182 @@ export default function BusinessOverviewClient() {
     loadBusinesses();
   }, []);
 
+  // Refresh businesses data from API
+  const refreshBusinesses = async () => {
+    setIsRefreshing(true);
+    try {
+      console.log('🔄 Refreshing businesses from API...');
+      const response = await businessApi.getOnboardedBusinesses();
+      console.log('📥 Refresh API Response:', response);
+
+      // Check if response is an array (API returns businesses array directly)
+      if (Array.isArray(response)) {
+        console.log('✅ Refreshed businesses from API:', response);
+
+        // Map API response to component format
+        const mappedBusinesses = response.map(mapApiBusinessToComponent);
+
+        console.log('📊 Refreshed mapped businesses:', mappedBusinesses);
+        console.log('🔄 Setting businesses state with', mappedBusinesses.length, 'businesses');
+        setBusinesses(mappedBusinesses);
+
+        // Verify the state was updated
+        setTimeout(() => {
+          console.log('🔍 Current businesses state after refresh:', businesses);
+        }, 100);
+      } else if (response && response.data && Array.isArray(response.data)) {
+        // Fallback: check if response has data property
+        console.log('✅ Refreshed businesses from API (with data property):', response.data);
+
+        // Map API response to component format
+        const mappedBusinesses = response.data.map(mapApiBusinessToComponent);
+
+        console.log('📊 Refreshed mapped businesses:', mappedBusinesses);
+        console.log('🔄 Setting businesses state with', mappedBusinesses.length, 'businesses');
+        setBusinesses(mappedBusinesses);
+
+        // Verify the state was updated
+        setTimeout(() => {
+          console.log('🔍 Current businesses state after refresh:', businesses);
+        }, 100);
+      } else {
+        console.warn('⚠️ Invalid API response structure:', response);
+        console.log('🔍 Response type:', typeof response);
+        console.log('🔍 Is array:', Array.isArray(response));
+        console.log('🔍 Has data property:', !!(response && response.data));
+        if (response && response.data) {
+          console.log('🔍 Data is array:', Array.isArray(response.data));
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing businesses from API:', error);
+      addNotification({
+        title: 'Refresh Failed',
+        message: 'Failed to refresh business data. Please try again.',
+        type: 'error',
+        isRead: false
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const updateBusiness = async (businessId: string, updateData: {
+    name?: string;
+    status?: 'active' | 'inactive' | 'onboarding';
+    industry?: string;
+    business_plan?: string;
+    features?: { [key: string]: boolean };
+    is_deleted?: boolean;
+  }) => {
+    console.log('🔄 updateBusiness function called');
+    console.log('🆔 Business ID:', businessId);
+    console.log('📊 Update Data:', updateData);
+
+    setIsUpdating(true);
+    try {
+      console.log('🔄 Updating business:', businessId, updateData);
+      console.log('🌐 Calling businessApi.updateBusiness...');
+      const response = await businessApi.updateBusiness(businessId, updateData);
+      console.log('📥 Update API Response:', response);
+
+      // Check if the update was successful (API returns the updated business object directly)
+      if (response) {
+        console.log('✅ Business updated successfully');
+        console.log('📊 Update response:', response);
+
+        // Refresh the businesses list to get updated data
+        console.log('🔄 Calling refreshBusinesses after successful update...');
+        try {
+          await refreshBusinesses();
+          console.log('✅ refreshBusinesses completed successfully');
+        } catch (refreshError) {
+          console.error('❌ Error during refreshBusinesses:', refreshError);
+        }
+
+        addNotification({
+          title: 'Business Updated',
+          message: 'Business information has been updated successfully.',
+          type: 'success',
+          isRead: false
+        });
+      } else {
+        console.warn('⚠️ Update API response is null or undefined:', response);
+      }
+    } catch (error) {
+      console.error('❌ Error updating business:', error);
+      addNotification({
+        title: 'Update Failed',
+        message: 'Failed to update business information. Please try again.',
+        type: 'error',
+        isRead: false
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleToggleFeature = async (businessId: string, featureName: string, enabled: boolean) => {
+    try {
+      // Get current business data
+      const business = businesses.find(b => b.id === businessId);
+      if (!business) return;
+
+      // Convert feature name back to snake_case for API
+      const featureMap: { [key: string]: string } = {
+        'Dashboard': 'dashboard',
+        'Data Center': 'data_centre', // Use API's actual field name
+        'Tribly AI': 'tribly_ai',
+        'Achievements': 'achievements',
+        'Cohorts': 'cohorts',
+        'Automation': 'automation',
+        'Campaigns': 'campaigns'
+      };
+
+      const apiFeatureName = featureMap[featureName] || featureName.toLowerCase().replace(/\s+/g, '_');
+
+      // Get current features from business (if available)
+      const currentFeatures = (business as Business & { features?: { [key: string]: boolean } }).features || {
+        dashboard: false,
+        data_centre: false, // Use API's actual field name
+        tribly_ai: false,
+        achievements: false,
+        cohorts: false,
+        automation: false,
+        campaigns: false
+      };
+
+      // Update the specific feature
+      const updatedFeatures = {
+        ...currentFeatures,
+        [apiFeatureName]: enabled
+      };
+
+      // Call update API
+      await updateBusiness(businessId, { features: updatedFeatures });
+    } catch (error) {
+      console.error('Error toggling feature:', error);
+    }
+  };
+
   // Listen for business creation events to refresh data
   useEffect(() => {
     const handleBusinessCreated = (e: CustomEvent) => {
       const newBusiness = e.detail;
-      setBusinesses(prev => [...prev, newBusiness]);
+      setBusinesses(prev => {
+        const currentBusinesses = Array.isArray(prev) ? prev : [];
+        return [...currentBusinesses, newBusiness];
+      });
     };
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'onboardedBusinesses' && e.newValue) {
         try {
           const parsedBusinesses = JSON.parse(e.newValue);
-          setBusinesses(parsedBusinesses);
+          setBusinesses(Array.isArray(parsedBusinesses) ? parsedBusinesses : []);
         } catch (error) {
           console.error('Error parsing updated businesses from localStorage:', error);
+          setBusinesses([]);
         }
       }
     };
@@ -135,13 +432,33 @@ export default function BusinessOverviewClient() {
     window.addEventListener('businessCreated', handleBusinessCreated as EventListener);
     window.addEventListener('storage', handleStorageChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     return () => {
       window.removeEventListener('businessCreated', handleBusinessCreated as EventListener);
       window.removeEventListener('storage', handleStorageChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
+
+  // Debug: Monitor changes to editingBusiness state
+  useEffect(() => {
+    console.log('🔍 editingBusiness state changed:', editingBusiness);
+    console.log('🔍 editingBusiness type:', typeof editingBusiness);
+    console.log('🔍 editingBusiness === null:', editingBusiness === null);
+    console.log('🔍 editingBusiness === undefined:', editingBusiness === undefined);
+    if (editingBusiness) {
+      console.log('🔍 editingBusiness.id:', editingBusiness.id);
+      console.log('🔍 editingBusiness.name:', editingBusiness.name);
+    }
+  }, [editingBusiness]);
+
+  // Debug: Monitor changes to businesses state
+  useEffect(() => {
+    console.log('🔍 businesses state changed:', businesses);
+    console.log('🔍 businesses count:', businesses?.length || 0);
+    console.log('🔍 businesses type:', typeof businesses);
+    console.log('🔍 businesses is array:', Array.isArray(businesses));
+  }, [businesses]);
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -196,33 +513,37 @@ export default function BusinessOverviewClient() {
   };
 
   const filteredAndSortedBusinesses = useMemo(() => {
-    if (businesses.length === 0) return [];
-    
+    if (!businesses || !Array.isArray(businesses) || (!businesses || !Array.isArray(businesses) || businesses.length === 0)) return [];
+
     return businesses.filter(business => {
+      // Filter out deleted businesses
+      const isNotDeleted = !(business as any).is_deleted;
+
       const matchesSearch = business.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            business.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            business.assignedTo.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === 'all' || business.status === statusFilter;
       const matchesUserType = userTypeFilter === 'all' || business.userType === userTypeFilter;
       const matchesIndustry = industryFilter === 'all' || business.industry === industryFilter;
-      const matchesFeaturesCount = featuresCountFilter === 'all' || 
-        (featuresCountFilter === '0' && business.features.length === 0) ||
-        (featuresCountFilter === '1' && business.features.length === 1) ||
-        (featuresCountFilter === '2' && business.features.length === 2) ||
-        (featuresCountFilter === '3' && business.features.length === 3) ||
-        (featuresCountFilter === '4' && business.features.length === 4) ||
-        (featuresCountFilter === '5+' && business.features.length >= 5);
+      const featuresLength = business.features && Array.isArray(business.features) ? business.features.length : 0;
+      const matchesFeaturesCount = featuresCountFilter === 'all' ||
+        (featuresCountFilter === '0' && featuresLength === 0) ||
+        (featuresCountFilter === '1' && featuresLength === 1) ||
+        (featuresCountFilter === '2' && featuresLength === 2) ||
+        (featuresCountFilter === '3' && featuresLength === 3) ||
+        (featuresCountFilter === '4' && featuresLength === 4) ||
+        (featuresCountFilter === '5+' && featuresLength >= 5);
       const matchesAssignedTo = assignedToFilter === 'all' || business.assignedTo === assignedToFilter;
 
-      return matchesSearch && matchesStatus && matchesUserType && matchesIndustry && matchesFeaturesCount && matchesAssignedTo;
+      return isNotDeleted && matchesSearch && matchesStatus && matchesUserType && matchesIndustry && matchesFeaturesCount && matchesAssignedTo;
     });
   }, [businesses, searchQuery, statusFilter, userTypeFilter, industryFilter, featuresCountFilter, assignedToFilter]);
 
   const industries = ['Technology', 'Retail', 'Healthcare', 'Finance', 'Education', 'Manufacturing'];
-  
+
   // Get unique assigned users from business data
   const assignedUsers = useMemo(() => {
-    if (businesses.length === 0) return [];
+    if (!businesses || !Array.isArray(businesses) || businesses.length === 0) return [];
     const users = businesses.map(business => business.assignedTo);
     return Array.from(new Set(users)).sort();
   }, [businesses]);
@@ -232,6 +553,8 @@ export default function BusinessOverviewClient() {
   };
 
   const handleEditBusiness = (business: Business) => {
+    console.log('✏️ handleEditBusiness called with:', business);
+    console.log('✏️ Setting editingBusiness to:', business);
     setEditingBusiness(business);
     setEditFormData({
       name: business.name,
@@ -242,16 +565,128 @@ export default function BusinessOverviewClient() {
       assignedTo: business.assignedTo,
       features: [...business.features]
     });
+    console.log('📝 Edit form data set:', {
+      name: business.name,
+      industry: business.industry,
+      status: business.status,
+      userType: business.userType,
+      subscription: business.subscription,
+      assignedTo: business.assignedTo,
+      features: [...business.features]
+    });
     setIsEditDialogOpen(true);
+    console.log('📂 Edit dialog opened');
+    console.log('📂 Current editingBusiness state after setting:', editingBusiness);
   };
 
-  const handleSaveEdit = () => {
-    if (editingBusiness) {
-      // In a real app, this would make an API call to update the business
-      console.log('Saving business:', { ...editingBusiness, ...editFormData });
-      // For now, we'll just close the dialog
-      setIsEditDialogOpen(false);
-      setEditingBusiness(null);
+  const handleSaveEdit = async () => {
+    console.log('🔄 handleSaveEdit called');
+    console.log('📋 editingBusiness:', editingBusiness);
+    console.log('📋 editingBusiness type:', typeof editingBusiness);
+    console.log('📋 editingBusiness === null:', editingBusiness === null);
+    console.log('📋 editingBusiness === undefined:', editingBusiness === undefined);
+    console.log('📝 editFormData:', editFormData);
+
+    if (!editingBusiness) {
+      console.log('❌ No editingBusiness, returning');
+      console.log('❌ Current state values:');
+      console.log('  - isEditDialogOpen:', isEditDialogOpen);
+      console.log('  - editingBusiness:', editingBusiness);
+      console.log('  - editFormData:', editFormData);
+      return;
+    }
+
+    try {
+      // Prepare update data for API
+      const updateData: {
+        name?: string;
+        status?: 'active' | 'inactive' | 'onboarding';
+        industry?: string;
+        business_plan?: string;
+        features?: { [key: string]: boolean };
+        is_deleted?: boolean;
+      } = {};
+
+      // Only include changed fields
+      if (editFormData.name !== editingBusiness.name) {
+        updateData.name = editFormData.name;
+        console.log('📝 Name changed:', editingBusiness.name, '→', editFormData.name);
+      }
+      if (editFormData.status !== editingBusiness.status) {
+        updateData.status = editFormData.status;
+        console.log('📝 Status changed:', editingBusiness.status, '→', editFormData.status);
+      }
+      if (editFormData.industry !== editingBusiness.industry) {
+        updateData.industry = editFormData.industry;
+        console.log('📝 Industry changed:', editingBusiness.industry, '→', editFormData.industry);
+      }
+      if (editFormData.userType !== editingBusiness.userType) {
+        updateData.business_plan = editFormData.userType;
+        console.log('📝 UserType changed:', editingBusiness.userType, '→', editFormData.userType);
+      }
+
+      // Check for features changes
+      console.log('🔍 Comparing features:');
+      console.log('  Original features:', editingBusiness.features);
+      console.log('  Form features:', editFormData.features);
+      console.log('  Original sorted:', editingBusiness.features.sort());
+      console.log('  Form sorted:', editFormData.features.sort());
+
+      const featuresChanged = JSON.stringify(editFormData.features.sort()) !== JSON.stringify(editingBusiness.features.sort());
+      console.log('  Features changed:', featuresChanged);
+
+      if (featuresChanged) {
+        console.log('📝 Features changed:', editingBusiness.features, '→', editFormData.features);
+
+        // Convert features array back to API format
+        const featureMap: { [key: string]: string } = {
+          'Dashboard': 'dashboard',
+          'Data Center': 'data_centre', // Use API's actual field name
+          'Tribly AI': 'tribly_ai',
+          'Achievements': 'achievements',
+          'Cohorts': 'cohorts',
+          'Automation': 'automation',
+          'Campaigns': 'campaigns'
+        };
+
+        const apiFeatures: { [key: string]: boolean } = {
+          dashboard: false,
+          data_centre: false, // Use API's actual field name
+          tribly_ai: false,
+          achievements: false,
+          cohorts: false,
+          automation: false,
+          campaigns: false
+        };
+
+        // Set enabled features to true
+        editFormData.features.forEach(feature => {
+          const apiFeatureName = featureMap[feature] || feature.toLowerCase().replace(/\s+/g, '_');
+          apiFeatures[apiFeatureName] = true;
+        });
+
+        updateData.features = apiFeatures;
+        console.log('📝 API Features prepared:', apiFeatures);
+      }
+
+      console.log('📊 Update data prepared:', updateData);
+      console.log('🔢 Number of changes:', Object.keys(updateData).length);
+
+      // Only make API call if there are changes
+      if (Object.keys(updateData).length > 0) {
+        console.log('🚀 Making API call with updateData:', updateData);
+        await updateBusiness(editingBusiness.id, updateData);
+        // Close dialog and reset state after successful update
+        setIsEditDialogOpen(false);
+        setEditingBusiness(null);
+      } else {
+        console.log('ℹ️ No changes detected, closing dialog');
+        // No changes, just close the dialog
+        setIsEditDialogOpen(false);
+        setEditingBusiness(null);
+      }
+    } catch (error) {
+      console.error('❌ Error saving business:', error);
     }
   };
 
@@ -270,15 +705,23 @@ export default function BusinessOverviewClient() {
   };
 
   const handleFeatureToggle = (feature: string) => {
-    setEditFormData(prev => ({
-      ...prev,
-      features: prev.features.includes(feature)
+    console.log('🔄 handleFeatureToggle called with feature:', feature);
+    console.log('📝 Current features before toggle:', editFormData.features);
+
+    setEditFormData(prev => {
+      const newFeatures = prev.features.includes(feature)
         ? prev.features.filter(f => f !== feature)
-        : [...prev.features, feature]
-    }));
+        : [...prev.features, feature];
+
+      console.log('📝 New features after toggle:', newFeatures);
+      return {
+        ...prev,
+        features: newFeatures
+      };
+    });
   };
 
-  const handleDeleteBusiness = () => {
+  const handleDeleteBusiness = async () => {
     if (!editingBusiness) {
       console.error('No business selected for deletion');
       return;
@@ -295,44 +738,68 @@ export default function BusinessOverviewClient() {
         return;
       }
 
-      // Remove business from localStorage
-      const updatedBusinesses = businesses.filter(b => b.id !== editingBusiness.id);
-      
-      // Update state first
-      setBusinesses(updatedBusinesses);
-      
-      // Update localStorage with error handling
-      try {
-        localStorage.setItem('onboardedBusinesses', JSON.stringify(updatedBusinesses));
-      } catch (storageError) {
-        console.error('Failed to update localStorage:', storageError);
-        // In production, you might want to show an error toast or retry mechanism
-        // For now, we'll continue as the state is already updated
-      }
-      
-      // Close dialogs
-      setIsDeleteDialogOpen(false);
-      setIsEditDialogOpen(false);
-      setEditingBusiness(null);
-      
-      // Reset form data
-      setEditFormData({
-        name: '',
-        industry: '',
-        status: 'active',
-        userType: 'trial',
-        subscription: '',
-        assignedTo: '',
-        features: []
+      console.log('🗑️ Deleting business:', editingBusiness.id, editingBusiness.name);
+
+      // Call API to mark business as deleted
+      const response = await businessApi.updateBusiness(editingBusiness.id, {
+        is_deleted: true
       });
 
-      // Show success feedback (you might want to add a toast notification here)
-      console.log(`Business "${editingBusiness.name}" deleted successfully`);
-      
+      if (response) {
+        console.log('✅ Business marked as deleted successfully');
+
+        // Refresh the businesses list to get updated data
+        console.log('🔄 Refreshing businesses after deletion...');
+        try {
+          await refreshBusinesses();
+          console.log('✅ refreshBusinesses completed after deletion');
+        } catch (refreshError) {
+          console.error('❌ Error during refreshBusinesses after deletion:', refreshError);
+        }
+
+        // Close dialogs
+        setIsDeleteDialogOpen(false);
+        setIsEditDialogOpen(false);
+        setEditingBusiness(null);
+
+        // Reset form data
+        setEditFormData({
+          name: '',
+          industry: '',
+          status: 'active',
+          userType: 'trial',
+          subscription: '',
+          assignedTo: '',
+          features: []
+        });
+
+        // Show success notification
+        addNotification({
+          title: 'Business Deleted',
+          message: `Business "${editingBusiness.name}" has been deleted successfully.`,
+          type: 'success',
+          isRead: false
+        });
+
+        console.log(`Business "${editingBusiness.name}" deleted successfully`);
+      } else {
+        console.warn('⚠️ Delete API response is null or undefined:', response);
+        addNotification({
+          title: 'Delete Failed',
+          message: 'Failed to delete business. Please try again.',
+          type: 'error',
+          isRead: false
+        });
+      }
+
     } catch (error) {
-      console.error('Error deleting business:', error);
-      // In production, you might want to show an error toast here
-      // For now, we'll just log the error
+      console.error('❌ Error deleting business:', error);
+      addNotification({
+        title: 'Delete Failed',
+        message: 'Failed to delete business. Please try again.',
+        type: 'error',
+        isRead: false
+      });
     }
   };
 
@@ -374,26 +841,53 @@ export default function BusinessOverviewClient() {
         <div className="p-4 space-y-4">
           {/* Mobile Header */}
           <div className="flex gap-[7px] items-start mb-4">
-            <button 
+            <button
               onClick={handleBack}
               className="flex items-center justify-center shrink-0 size-[32px] hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
               aria-label="Go back"
             >
-              <svg 
-                width="32" 
-                height="32" 
-                viewBox="0 0 32 32" 
-                fill="none" 
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 32 32"
+                fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path 
-                  fillRule="evenodd" 
-                  clipRule="evenodd" 
-                  d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z" 
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z"
                   fill="#0D0D0D"
                 />
               </svg>
             </button>
+
+            {/* Mobile Title and Refresh Button */}
+            <div className="flex-1 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-black">Onboarded Businesses</h2>
+                <p className="text-sm text-muted-foreground">Manage business accounts</p>
+              </div>
+              <Button
+                onClick={refreshBusinesses}
+                disabled={isRefreshing}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                {isRefreshing ? (
+                  <>
+                    <Building2 className="h-4 w-4 animate-spin" />
+                    Refreshing...
+                  </>
+                ) : (
+                  <>
+                    <Building2 className="h-4 w-4" />
+                    Refresh
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* Mobile Search and Filters - Redesigned */}
@@ -416,7 +910,7 @@ export default function BusinessOverviewClient() {
                 <span className="text-xs text-gray-500">
                   {[statusFilter, userTypeFilter, industryFilter, featuresCountFilter, assignedToFilter].filter(f => f !== 'all').length} active
                 </span>
-                <button 
+                <button
                   onClick={() => {
                     setStatusFilter('all');
                     setUserTypeFilter('all');
@@ -509,7 +1003,7 @@ export default function BusinessOverviewClient() {
                 {statusFilter !== 'all' && (
                   <div className="flex items-center space-x-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-sm">
                     <span>Status: {statusFilter}</span>
-                    <button 
+                    <button
                       onClick={() => setStatusFilter('all')}
                       className="text-blue-500 hover:text-blue-700"
                     >
@@ -520,7 +1014,7 @@ export default function BusinessOverviewClient() {
                 {userTypeFilter !== 'all' && (
                   <div className="flex items-center space-x-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-sm">
                     <span>Type: {userTypeFilter}</span>
-                    <button 
+                    <button
                       onClick={() => setUserTypeFilter('all')}
                       className="text-blue-500 hover:text-blue-700"
                     >
@@ -531,7 +1025,7 @@ export default function BusinessOverviewClient() {
                 {industryFilter !== 'all' && (
                   <div className="flex items-center space-x-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-sm">
                     <span>Industry: {industryFilter}</span>
-                    <button 
+                    <button
                       onClick={() => setIndustryFilter('all')}
                       className="text-blue-500 hover:text-blue-700"
                     >
@@ -542,7 +1036,7 @@ export default function BusinessOverviewClient() {
                 {featuresCountFilter !== 'all' && (
                   <div className="flex items-center space-x-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-sm">
                     <span>Features: {featuresCountFilter}</span>
-                    <button 
+                    <button
                       onClick={() => setFeaturesCountFilter('all')}
                       className="text-blue-500 hover:text-blue-700"
                     >
@@ -553,7 +1047,7 @@ export default function BusinessOverviewClient() {
                 {assignedToFilter !== 'all' && (
                   <div className="flex items-center space-x-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-sm">
                     <span>Assigned: {assignedToFilter}</span>
-                    <button 
+                    <button
                       onClick={() => setAssignedToFilter('all')}
                       className="text-blue-500 hover:text-blue-700"
                     >
@@ -568,15 +1062,15 @@ export default function BusinessOverviewClient() {
           {/* Mobile Business List */}
           <div className="space-y-3">
             <h2 className="text-lg font-bold text-black">Businesses ({filteredAndSortedBusinesses.length})</h2>
-            
-            {businesses.length === 0 ? (
+
+            {(!businesses || !Array.isArray(businesses) || businesses.length === 0) ? (
               <div className="text-center py-12">
                 <Building2 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">No businesses onboarded yet</h3>
                 <p className="text-gray-600 mb-6 max-w-md mx-auto">
                   Start by onboarding your first business to see it appear here. Use the onboarding process to create and manage business accounts.
                 </p>
-                <Button 
+                <Button
                   onClick={() => router.push('/businesses/onboarding')}
                   className="bg-[#6E4EFF] hover:bg-[#7856FF] text-white"
                 >
@@ -585,7 +1079,7 @@ export default function BusinessOverviewClient() {
                 </Button>
               </div>
             ) : (
-              filteredAndSortedBusinesses.map((business) => (
+              filteredAndSortedBusinesses.map((business) => business ? (
                 <div key={business.id} className="bg-white border rounded-lg p-4 space-y-3">
                   {/* Business Header */}
                   <div className="flex items-start justify-between">
@@ -598,10 +1092,10 @@ export default function BusinessOverviewClient() {
                         <p className="text-sm text-muted-foreground truncate">{business.industry}</p>
                       </div>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
                       onClick={() => handleEditBusiness(business)}
                     >
                       <Edit className="h-4 w-4" />
@@ -622,7 +1116,7 @@ export default function BusinessOverviewClient() {
                       <p className="text-xs text-muted-foreground">Users</p>
                     </div>
                     <div className="text-center">
-                      <p className="font-semibold text-sm">{business.features.length}</p>
+                      <p className="font-semibold text-sm">{business.features && Array.isArray(business.features) ? business.features.length : 0}</p>
                       <p className="text-xs text-muted-foreground">Features</p>
                     </div>
                     <div className="text-center">
@@ -639,11 +1133,11 @@ export default function BusinessOverviewClient() {
                   </div>
 
                   {/* Features */}
-                  {business.features.length > 0 && (
+                  {business.features && Array.isArray(business.features) && business.features.length > 0 && (
                     <div className="pt-2 border-t border-gray-100">
                       <p className="text-xs text-muted-foreground mb-2">Features:</p>
                       <div className="flex flex-wrap gap-1">
-                        {business.features.map((feature, index) => (
+                        {(business.features || []).map((feature, index) => (
                           <span key={index} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
                             {feature}
                           </span>
@@ -652,10 +1146,10 @@ export default function BusinessOverviewClient() {
                     </div>
                   )}
                 </div>
-              ))
+              ) : null)
             )}
 
-            {businesses.length > 0 && filteredAndSortedBusinesses.length === 0 && (
+            {(businesses && Array.isArray(businesses) && businesses.length > 0) && filteredAndSortedBusinesses.length === 0 && (
               <div className="text-center py-12">
                 <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No businesses found</h3>
@@ -673,22 +1167,22 @@ export default function BusinessOverviewClient() {
         <div className="space-y-6">
           {/* Header */}
           <div className="flex gap-[7px] items-start mb-6">
-            <button 
+            <button
               onClick={handleBack}
               className="flex items-center justify-center shrink-0 size-[32px] hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
               aria-label="Go back"
             >
-              <svg 
-                width="32" 
-                height="32" 
-                viewBox="0 0 32 32" 
-                fill="none" 
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 32 32"
+                fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path 
-                  fillRule="evenodd" 
-                  clipRule="evenodd" 
-                  d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z" 
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z"
                   fill="#0D0D0D"
                 />
               </svg>
@@ -698,8 +1192,30 @@ export default function BusinessOverviewClient() {
           {/* Businesses Table */}
           <div>
             <div className="mb-6">
-              <h2 className="text-[20px] font-bold text-black">Onboarded Businesses</h2>
-              <p className="text-[14px] font-normal text-muted-foreground">Manage business accounts, subscriptions, and performance</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-[20px] font-bold text-black">Onboarded Businesses</h2>
+                  <p className="text-[14px] font-normal text-muted-foreground">Manage business accounts, subscriptions, and performance</p>
+                </div>
+                <Button
+                  onClick={refreshBusinesses}
+                  disabled={isRefreshing}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  {isRefreshing ? (
+                    <>
+                      <Building2 className="h-4 w-4 animate-spin" />
+                      Refreshing...
+                    </>
+                  ) : (
+                    <>
+                      <Building2 className="h-4 w-4" />
+                      Refresh
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
 
             {/* Filters */}
@@ -779,17 +1295,17 @@ export default function BusinessOverviewClient() {
                 />
               </div>
             </div>
-            
+
             <div>
               <div className="space-y-2">
-                {businesses.length === 0 ? (
+                {(!businesses || !Array.isArray(businesses) || businesses.length === 0) ? (
                   <div className="text-center py-16">
                     <Building2 className="h-20 w-20 text-gray-400 mx-auto mb-6" />
                     <h3 className="text-2xl font-semibold text-gray-900 mb-3">No businesses onboarded yet</h3>
                     <p className="text-gray-600 mb-8 max-w-lg mx-auto">
                       Start by onboarding your first business to see it appear here. Use the onboarding process to create and manage business accounts.
                     </p>
-                    <Button 
+                    <Button
                       onClick={() => router.push('/businesses/onboarding')}
                       className="bg-[#6E4EFF] hover:bg-[#7856FF] text-white px-8 py-3"
                     >
@@ -798,7 +1314,7 @@ export default function BusinessOverviewClient() {
                     </Button>
                   </div>
                 ) : (
-                  filteredAndSortedBusinesses.map((business) => (
+                  filteredAndSortedBusinesses.map((business) => business ? (
                     <div key={business.id} className="flex items-center justify-between p-4 bg-white border rounded-lg hover:bg-gray-50 transition-colors">
                       {/* Left Section - Business Info */}
                       <div className="flex items-center space-x-3 flex-1 min-w-0">
@@ -828,17 +1344,17 @@ export default function BusinessOverviewClient() {
                           <p className="text-xs text-muted-foreground">Users</p>
                         </div>
                         <div className="text-center min-w-[50px]">
-                          <p className="font-semibold text-base">{business.features.length}</p>
+                          <p className="font-semibold text-base">{business.features && Array.isArray(business.features) ? business.features.length : 0}</p>
                           <p className="text-xs text-muted-foreground">Features</p>
                         </div>
                       </div>
 
                       {/* Right Section - Actions */}
                       <div className="flex items-center space-x-1 flex-shrink-0">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
                           title="Edit Business"
                           onClick={() => handleEditBusiness(business)}
                         >
@@ -846,10 +1362,10 @@ export default function BusinessOverviewClient() {
                         </Button>
                       </div>
                     </div>
-                  ))
+                  ) : null)
                 )}
 
-                {businesses.length > 0 && filteredAndSortedBusinesses.length === 0 && (
+                {(businesses && Array.isArray(businesses) && businesses.length > 0) && filteredAndSortedBusinesses.length === 0 && (
                   <div className="text-center py-12">
                     <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-semibold mb-2">No businesses found</h3>
@@ -872,7 +1388,7 @@ export default function BusinessOverviewClient() {
                 Update the business information and settings.
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="grid gap-4 py-4 px-1 overflow-y-auto flex-1 min-h-0">
               <div className="grid grid-cols-2 gap-4">
                 <ImprovedInput
@@ -885,8 +1401,8 @@ export default function BusinessOverviewClient() {
                   containerClassName="w-full p-1"
                 />
                 <div className="space-y-2 p-1">
-                  <label 
-                    htmlFor="industry" 
+                  <label
+                    htmlFor="industry"
                     className="block text-sm font-medium text-gray-700 transition-colors duration-200"
                   >
                     Industry
@@ -909,8 +1425,8 @@ export default function BusinessOverviewClient() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 p-1">
-                  <label 
-                    htmlFor="status" 
+                  <label
+                    htmlFor="status"
                     className="block text-sm font-medium text-gray-700 transition-colors duration-200"
                   >
                     Status
@@ -930,8 +1446,8 @@ export default function BusinessOverviewClient() {
                   </Select>
                 </div>
                 <div className="space-y-2 p-1">
-                  <label 
-                    htmlFor="userType" 
+                  <label
+                    htmlFor="userType"
                     className="block text-sm font-medium text-gray-700 transition-colors duration-200"
                   >
                     User Type
@@ -954,8 +1470,8 @@ export default function BusinessOverviewClient() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 p-1">
-                  <label 
-                    htmlFor="subscription" 
+                  <label
+                    htmlFor="subscription"
                     className="block text-sm font-medium text-gray-700 transition-colors duration-200"
                   >
                     Subscription
@@ -992,9 +1508,9 @@ export default function BusinessOverviewClient() {
                 <div className="grid grid-cols-1 gap-3">
                   {[
                     'Dashboard',
-                    'Data Centre',
-                    'Tribly AI for Business',
-                    'Achievements and milestones', 
+                    'Data Center',
+                    'Tribly AI',
+                    'Achievements',
                     'Cohorts',
                     'Automation',
                     'Campaigns'
@@ -1016,8 +1532,8 @@ export default function BusinessOverviewClient() {
 
             <DialogFooter className="flex justify-between items-center flex-shrink-0 border-t pt-4">
               <div className="flex justify-start">
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   onClick={() => editingBusiness && setIsDeleteDialogOpen(true)}
                   disabled={!editingBusiness}
                   className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1030,8 +1546,25 @@ export default function BusinessOverviewClient() {
                 <Button variant="outline" onClick={handleCancelEdit}>
                   Cancel
                 </Button>
-                <Button onClick={handleSaveEdit}>
+                <Button onClick={() => {
+                  console.log('🖱️ Save Changes button clicked');
+                  console.log('🖱️ Current editingBusiness before handleSaveEdit:', editingBusiness);
+                  console.log('🖱️ Current editingBusiness type:', typeof editingBusiness);
+                  console.log('🖱️ Current editingBusiness === null:', editingBusiness === null);
+                  handleSaveEdit();
+                }}>
                   Save Changes
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    console.log('🧪 Test API call button clicked');
+                    if (editingBusiness) {
+                      updateBusiness(editingBusiness.id, { name: 'Test Update' });
+                    }
+                  }}
+                >
+                  Test API
                 </Button>
               </div>
             </DialogFooter>
@@ -1047,7 +1580,7 @@ export default function BusinessOverviewClient() {
                 Delete Business
               </AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete <strong>{editingBusiness?.name}</strong>? 
+                Are you sure you want to delete <strong>{editingBusiness?.name}</strong>?
                 This action cannot be undone and will permanently remove all business data.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -1055,7 +1588,7 @@ export default function BusinessOverviewClient() {
               <AlertDialogCancel onClick={handleCancelDelete}>
                 Cancel
               </AlertDialogCancel>
-              <AlertDialogAction 
+              <AlertDialogAction
                 onClick={handleDeleteBusiness}
                 className="bg-red-600 hover:bg-red-700"
               >
