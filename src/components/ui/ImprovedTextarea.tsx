@@ -21,11 +21,11 @@ export interface ImprovedTextareaProps extends React.TextareaHTMLAttributes<HTML
 }
 
 const ImprovedTextarea = forwardRef<HTMLTextAreaElement, ImprovedTextareaProps>(
-  ({ 
-    label, 
-    error, 
-    success, 
-    validate, 
+  ({
+    label,
+    error,
+    success,
+    validate,
     onValidationChange,
     showValidationIcon = true,
     required = false,
@@ -38,7 +38,7 @@ const ImprovedTextarea = forwardRef<HTMLTextAreaElement, ImprovedTextareaProps>(
     onChange,
     maxLength,
     showCharCount = true,
-    ...props 
+    ...props
   }, ref) => {
     const [internalError, setInternalError] = useState<string | null>(null);
     const [isValidating, setIsValidating] = useState(false);
@@ -59,7 +59,7 @@ const ImprovedTextarea = forwardRef<HTMLTextAreaElement, ImprovedTextareaProps>(
     const handleBlur = useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
       setHasBeenTouched(true);
       setIsFocused(false);
-      
+
       if (validate) {
         setIsValidating(true);
         // Use setTimeout to prevent blocking the UI
@@ -76,7 +76,7 @@ const ImprovedTextarea = forwardRef<HTMLTextAreaElement, ImprovedTextareaProps>(
     const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const value = e.target.value;
       setCharCount(value.length);
-      
+
       if (hasBeenTouched && validate) {
         const validationError = validateValue(value);
         setInternalError(validationError);
@@ -87,8 +87,8 @@ const ImprovedTextarea = forwardRef<HTMLTextAreaElement, ImprovedTextareaProps>(
 
     const handleFocus = useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
       setIsFocused(true);
-      props.onFocus?.(e);
-    }, [props.onFocus]);
+      onFocus?.(e);
+    }, []);
 
     // Memoize the textarea classes to prevent unnecessary re-renders
     const textareaClasses = useMemo(() => cn(
@@ -96,23 +96,23 @@ const ImprovedTextarea = forwardRef<HTMLTextAreaElement, ImprovedTextareaProps>(
       "flex min-h-[80px] w-full rounded-[4px] border border-input bg-background px-3 py-2.5 text-sm",
       "ring-offset-background placeholder:text-muted-foreground transition-all duration-200 ease-in-out",
       "resize-none",
-      
+
       // Focus styles
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-      
+
       // Disabled styles
       "disabled:cursor-not-allowed disabled:opacity-50",
-      
+
       // Validation styles
       isError && "border-red-500 focus-visible:ring-red-500 focus-visible:ring-offset-red-50",
       isSuccess && "border-green-500 focus-visible:ring-green-500 focus-visible:ring-offset-green-50",
-      
+
       // Focus state
       isFocused && !isError && !isSuccess && "border-blue-500 focus-visible:ring-blue-500",
-      
+
       // Hover state
       "hover:border-gray-400",
-      
+
       className,
       textareaClassName
     ), [isError, isSuccess, isFocused, className, textareaClassName]);
@@ -120,8 +120,8 @@ const ImprovedTextarea = forwardRef<HTMLTextAreaElement, ImprovedTextareaProps>(
     return (
       <div className={cn("space-y-2", containerClassName)}>
         {label && (
-          <label 
-            htmlFor={props.id} 
+          <label
+            htmlFor={props.id}
             className={cn(
               "block text-sm font-medium text-gray-700 transition-colors duration-200",
               isError && "text-red-700",
@@ -133,7 +133,7 @@ const ImprovedTextarea = forwardRef<HTMLTextAreaElement, ImprovedTextareaProps>(
             {required && <span className="text-red-500 ml-1">*</span>}
           </label>
         )}
-        
+
         <div className="relative">
           <textarea
             ref={ref}
@@ -144,7 +144,7 @@ const ImprovedTextarea = forwardRef<HTMLTextAreaElement, ImprovedTextareaProps>(
             maxLength={maxLength}
             {...props}
           />
-          
+
           {showValidationIcon && hasBeenTouched && (
             <div className="absolute right-3 top-3 pointer-events-none">
               {isValidating ? (
@@ -157,7 +157,7 @@ const ImprovedTextarea = forwardRef<HTMLTextAreaElement, ImprovedTextareaProps>(
             </div>
           )}
         </div>
-        
+
         {/* Character count */}
         {maxLength && showCharCount && (
           <div className="flex justify-end">
@@ -170,7 +170,7 @@ const ImprovedTextarea = forwardRef<HTMLTextAreaElement, ImprovedTextareaProps>(
             </span>
           </div>
         )}
-        
+
         {isError && (
           <p className={cn(
             "text-sm text-red-500 flex items-center gap-1.5 animate-in slide-in-from-top-1 duration-200",

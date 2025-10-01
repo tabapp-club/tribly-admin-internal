@@ -5,7 +5,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PWAInstaller from "@/components/PWAInstaller";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import "@/utils/migration";
 
 const manrope = Manrope({

@@ -1,33 +1,29 @@
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext';
 // Removed DashboardLayout import
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   BarChart3,
   TrendingUp,
   TrendingDown,
-  Users,
   Building2,
   DollarSign,
-  Target,
-  Calendar,
   Download,
   Filter,
+  Users,
+  Target,
 } from 'lucide-react';
 
 export default function AnalyticsPage() {
 
   // Analytics data - in a real app, this would come from an API
-  const revenueData = [];
 
-  const topBusinesses = [];
+  const topBusinesses: Array<{ name: string; industry: string; revenue: number; growth: number }> = [];
 
-  const featureUsage = [];
+  const featureUsage: Array<{ name: string; usage: number; trend: string }> = [];
 
-  const teamPerformance = [];
+  const teamPerformance: Array<{ name: string; performance: number; trend: string; businesses: number; revenue: number; target: number }> = [];
 
 
   return (

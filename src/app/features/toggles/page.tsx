@@ -16,19 +16,15 @@ import {
   Target,
   Brain,
   Database,
-  Users,
   Trophy,
-  ShoppingCart,
   Settings,
   Search,
-  Filter,
   Plus,
   Edit,
   Trash2,
   Eye,
   AlertCircle,
-  CheckCircle,
-  Clock
+  CheckCircle
 } from 'lucide-react';
 
 interface Feature {
@@ -81,7 +77,8 @@ export default function FeatureTogglesPage() {
     addNotification({
       title: enabled ? 'Feature Enabled' : 'Feature Disabled',
       message: `Feature has been ${enabled ? 'enabled' : 'disabled'} for all businesses.`,
-      type: enabled ? 'success' : 'warning'
+      type: enabled ? 'success' : 'warning',
+      isRead: false
     });
   };
 

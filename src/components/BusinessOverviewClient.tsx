@@ -461,7 +461,7 @@ export default function BusinessOverviewClient() {
 
     return businesses.filter(business => {
       // Filter out deleted businesses
-      const isNotDeleted = !(business as any).is_deleted;
+      const isNotDeleted = !(business as { is_deleted?: boolean }).is_deleted;
 
       const matchesSearch = business.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            business.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||

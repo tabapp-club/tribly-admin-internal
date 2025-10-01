@@ -134,7 +134,7 @@ export interface AuditLog {
   action: string
   resource: string
   resourceId: string
-  details: Record<string, any>
+  details: Record<string, unknown>
   ipAddress: string
   userAgent: string
   createdAt: Date
@@ -153,7 +153,7 @@ export interface PaginationParams {
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
   search?: string
-  filters?: Record<string, any>
+  filters?: Record<string, unknown>
 }
 
 export interface PaginatedResponse<T> {

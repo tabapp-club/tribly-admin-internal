@@ -16,7 +16,7 @@ interface ApiOptions {
   errorMessage?: string;
 }
 
-export function useApi<T = any>(options: ApiOptions = {}) {
+export function useApi<T = unknown>(options: ApiOptions = {}) {
   const { addNotification } = useNotifications();
   const [state, setState] = useState<ApiState<T>>({
     data: null,
@@ -29,12 +29,12 @@ export function useApi<T = any>(options: ApiOptions = {}) {
     customOptions: ApiOptions = {}
   ) => {
     const finalOptions = { ...options, ...customOptions };
-    
+
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
       const data = await apiCall();
-      
+
       setState({
         data,
         loading: false,
@@ -52,7 +52,7 @@ export function useApi<T = any>(options: ApiOptions = {}) {
       return { data, error: null };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      
+
       setState({
         data: null,
         loading: false,

@@ -409,6 +409,31 @@ export default function BusinessOnboardingPage() {
     return isValid;
   }, [formData, validateField]);
 
+  // Auto-save functionality
+  const handleAutoSave = useCallback(async () => {
+    if (!autoSaveState.hasUnsavedChanges) return;
+
+    setAutoSaveState(prev => ({ ...prev, isAutoSaving: true }));
+    setLoadingState(prev => ({ ...prev, saving: true }));
+
+    try {
+      // Simulate API call for auto-save
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Mark as saved
+      setAutoSaveState(prev => ({
+        ...prev,
+        hasUnsavedChanges: false,
+        isAutoSaving: false,
+        lastSaved: new Date()
+      }));
+
+      setLoadingState(prev => ({ ...prev, saving: false }));
+    } catch (error) {
+      setAutoSaveState(prev => ({ ...prev, isAutoSaving: false }));
+      setLoadingState(prev => ({ ...prev, saving: false }));
+    }
+  }, [autoSaveState.hasUnsavedChanges]);
 
   // Enhanced input change handler with validation
   const handleInputChange = useCallback((field: string, value: string) => {
@@ -435,7 +460,7 @@ export default function BusinessOnboardingPage() {
     autoSaveTimeoutRef.current = setTimeout(() => {
       handleAutoSave();
     }, 2000);
-  }, [validationErrors]);
+  }, [validationErrors, handleAutoSave]);
 
   // Handle array input changes (for emails and phones)
   const handleArrayInputChange = useCallback((field: 'businessEmails' | 'businessPhones', index: number, value: string) => {
@@ -465,7 +490,7 @@ export default function BusinessOnboardingPage() {
     autoSaveTimeoutRef.current = setTimeout(() => {
       handleAutoSave();
     }, 2000);
-  }, [validationErrors]);
+  }, [validationErrors, handleAutoSave]);
 
   // Add new email/phone input
   const addArrayInput = useCallback((field: 'businessEmails' | 'businessPhones') => {
@@ -487,41 +512,6 @@ export default function BusinessOnboardingPage() {
     }
   }, [formData]);
 
-  // Auto-save functionality
-  const handleAutoSave = useCallback(async () => {
-    if (!autoSaveState.hasUnsavedChanges) return;
-
-    setAutoSaveState(prev => ({ ...prev, isAutoSaving: true }));
-    setLoadingState(prev => ({ ...prev, saving: true }));
-
-    try {
-      // Simulate API call for auto-save
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      setAutoSaveState(prev => ({
-        ...prev,
-        hasUnsavedChanges: false,
-        isAutoSaving: false,
-        lastSaved: new Date()
-      }));
-
-      addNotification({
-        title: 'Draft Saved',
-        message: 'Your progress has been automatically saved.',
-        type: 'success',
-        isRead: false
-      });
-    } catch {
-      addNotification({
-        title: 'Auto-save Failed',
-        message: 'Failed to save your progress. Please try again.',
-        type: 'error',
-        isRead: false
-      });
-    } finally {
-      setLoadingState(prev => ({ ...prev, saving: false }));
-    }
-  }, [autoSaveState.hasUnsavedChanges, addNotification]);
 
   // Enhanced submit handler
   const handleSubmit = useCallback(async () => {
@@ -676,7 +666,7 @@ export default function BusinessOnboardingPage() {
   // Confirm submit
   const confirmSubmit = useCallback(() => {
     setShowSubmitDialog(true);
-  }, [formData, validateForm]);
+  }, []);
 
   // Cancel submit
   const cancelSubmit = useCallback(() => {

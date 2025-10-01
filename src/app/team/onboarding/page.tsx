@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/button';
 import { ImprovedInput } from '@/components/ui/ImprovedInput';
 import { ImprovedTextarea } from '@/components/ui/ImprovedTextarea';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   User,
@@ -34,7 +37,7 @@ interface TabItem {
   id: string;
   title: string;
   description: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
   completed: boolean;
 }
 
@@ -146,7 +149,7 @@ export default function TeamOnboardingPage() {
   const handleArrayChange = (field: string, value: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
-      [field]: checked 
+      [field]: checked
         ? [...prev[field as keyof typeof prev] as string[], value]
         : (prev[field as keyof typeof prev] as string[]).filter(item => item !== value)
     }));
@@ -601,22 +604,22 @@ export default function TeamOnboardingPage() {
       <div className="max-w-7xl mx-auto w-full">
         {/* Header Section */}
         <div className="flex gap-[7px] items-start mb-12">
-          <button 
+          <button
             onClick={handleBack}
             className="flex items-center justify-center shrink-0 size-[32px] hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
             aria-label="Go back"
           >
-            <svg 
-              width="32" 
-              height="32" 
-              viewBox="0 0 32 32" 
-              fill="none" 
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 32 32"
+              fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path 
-                fillRule="evenodd" 
-                clipRule="evenodd" 
-                d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z" 
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z"
                 fill="#0D0D0D"
               />
             </svg>
@@ -650,7 +653,7 @@ export default function TeamOnboardingPage() {
 
             {/* Progress Bar */}
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
+              <div
                 className="bg-[#6E4EFF] h-2 rounded-full transition-all duration-300"
                 style={{ width: `${((tabs.findIndex(tab => tab.id === activeTab) + 1) / tabs.length) * 100}%` }}
               ></div>
@@ -732,9 +735,9 @@ export default function TeamOnboardingPage() {
                 })()}
               </div>
             </div>
-            
+
             {renderTabContent()}
-            
+
             {/* Navigation Buttons - Desktop Only */}
             <div className="hidden lg:flex justify-between mt-8">
               {/* Back Button - Only show from second tab onwards */}
@@ -743,25 +746,25 @@ export default function TeamOnboardingPage() {
                   onClick={handleTabBack}
                   className="bg-gray-100 box-border flex gap-[8px] h-[48px] items-center justify-center px-[16px] py-[12px] rounded-[4px] w-[120px] hover:bg-gray-200 transition-colors border border-gray-300"
                 >
-                  <svg 
-                    width="16" 
-                    height="16" 
-                    viewBox="0 0 32 32" 
-                    fill="none" 
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 32 32"
+                    fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                     className="text-gray-600"
                   >
-                    <path 
-                      fillRule="evenodd" 
-                      clipRule="evenodd" 
-                      d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z" 
+                    <path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z"
                       fill="currentColor"
                     />
                   </svg>
                   <span className="text-gray-700 font-medium">Back</span>
                 </button>
               )}
-              
+
               {/* Next Button */}
               <button
                 onClick={handleNext}
@@ -785,17 +788,17 @@ export default function TeamOnboardingPage() {
               disabled={tabs.findIndex(tab => tab.id === activeTab) === 0}
               className="flex items-center gap-2 px-6 py-3 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 rounded-lg"
             >
-              <svg 
-                width="16" 
-                height="16" 
-                viewBox="0 0 32 32" 
-                fill="none" 
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 32 32"
+                fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path 
-                  fillRule="evenodd" 
-                  clipRule="evenodd" 
-                  d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z" 
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M3.14551 15.9999C3.91882 15.4668 5.1713 14.1489 6.10547 12.8531C7.27318 11.2332 7.93849 10.1904 8.31866 9.0918L9.89367 10.1529C9.73979 10.7984 8.98125 12.6294 7.17814 14.7894L28.8547 14.7894V15.9999L3.14551 15.9999ZM3.14551 16.0001C3.91882 16.5332 5.1713 17.8511 6.10547 19.1469C7.27318 20.7668 7.93849 21.8096 8.31866 22.9082L9.89367 21.8471C9.73979 21.2016 8.98125 19.3706 7.17814 17.2106H28.8547V16.0001L3.14551 16.0001Z"
                   fill="currentColor"
                 />
               </svg>
@@ -809,17 +812,17 @@ export default function TeamOnboardingPage() {
               <span className="text-sm font-medium">
                 {tabs.findIndex(tab => tab.id === activeTab) === tabs.length - 1 ? 'Complete' : 'Next'}
               </span>
-              <svg 
-                width="16" 
-                height="16" 
-                viewBox="0 0 32 32" 
-                fill="none" 
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 32 32"
+                fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path 
-                  fillRule="evenodd" 
-                  clipRule="evenodd" 
-                  d="M28.8545 16.0001C28.0812 16.5332 26.8287 17.8511 25.8945 19.1469C24.7268 20.7668 24.0615 21.8096 23.6813 22.9082L22.1063 21.8471C22.2602 21.2016 23.0187 19.3706 24.8219 17.2106L3.14527 17.2106L3.14527 16.0001L28.8545 16.0001ZM28.8545 15.9999C28.0812 15.4668 26.8287 14.1489 25.8945 12.8531C24.7268 11.2332 24.0615 10.1904 23.6813 9.0918L22.1063 10.1529C22.2602 10.7984 23.0187 12.6294 24.8219 14.7894L3.14527 14.7894L3.14527 15.9999L28.8545 15.9999Z" 
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M28.8545 16.0001C28.0812 16.5332 26.8287 17.8511 25.8945 19.1469C24.7268 20.7668 24.0615 21.8096 23.6813 22.9082L22.1063 21.8471C22.2602 21.2016 23.0187 19.3706 24.8219 17.2106L3.14527 17.2106L3.14527 16.0001L28.8545 16.0001ZM28.8545 15.9999C28.0812 15.4668 26.8287 14.1489 25.8945 12.8531C24.7268 11.2332 24.0615 10.1904 23.6813 9.0918L22.1063 10.1529C22.2602 10.7984 23.0187 12.6294 24.8219 14.7894L3.14527 14.7894L3.14527 15.9999L28.8545 15.9999Z"
                   fill="currentColor"
                 />
               </svg>

@@ -8,10 +8,8 @@ import { authApi } from '@/utils/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ImprovedInput } from '@/components/ui/ImprovedInput';
-import { ImprovedTextarea } from '@/components/ui/ImprovedTextarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Settings,
@@ -20,11 +18,8 @@ import {
   Shield,
   Mail,
   Phone,
-  Globe,
   Save,
-  AlertCircle,
   CheckCircle,
-  Info,
   ChevronDown,
   Briefcase,
   Clock,
@@ -35,7 +30,7 @@ interface TabItem {
   id: string;
   title: string;
   description: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
   completed: boolean;
 }
 
@@ -114,7 +109,7 @@ export default function SettingsPage() {
       try {
         const response = await authApi.getMe();
         if (response.data) {
-          const userData = response.data;
+          const userData = response.data as any;
 
           // Extract first and last name from the user data
           const nameParts = userData.name?.split(' ') || ['', ''];
@@ -130,7 +125,7 @@ export default function SettingsPage() {
 
           setProfileSettings(newProfileSettings);
         }
-      } catch (error) {
+      } catch {
         // Fallback to user data from context
         if (user) {
           const nameParts = user.name?.split(' ') || ['', ''];
@@ -207,7 +202,7 @@ export default function SettingsPage() {
         if (profileSettings.department) updateData.department = profileSettings.department;
 
         // Call the API
-        const response = await authApi.updateProfile(updateData);
+        await authApi.updateProfile(updateData);
 
         // Update local user data
         updateUser({
@@ -233,10 +228,10 @@ export default function SettingsPage() {
           type: 'success'
         });
       }
-    } catch (error: any) {
+    } catch {
       addNotification({
         title: 'Save Failed',
-        message: error?.message || 'Failed to save settings. Please try again.',
+        message: 'Failed to save settings. Please try again.',
         type: 'error'
       });
     } finally {
@@ -275,7 +270,7 @@ export default function SettingsPage() {
           type: 'success'
         });
       }
-    } catch (error) {
+    } catch {
       addNotification({
         title: 'Refresh Failed',
         message: 'Could not refresh profile data. Please try again.',

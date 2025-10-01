@@ -35,27 +35,27 @@ export const validateGST = (gst: string): boolean => {
 // Password validation
 export const validatePassword = (password: string): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
-  
+
   if (password.length < 8) {
     errors.push('Password must be at least 8 characters long');
   }
-  
+
   if (!/[A-Z]/.test(password)) {
     errors.push('Password must contain at least one uppercase letter');
   }
-  
+
   if (!/[a-z]/.test(password)) {
     errors.push('Password must contain at least one lowercase letter');
   }
-  
+
   if (!/[0-9]/.test(password)) {
     errors.push('Password must contain at least one number');
   }
-  
+
   if (!/[^A-Za-z0-9]/.test(password)) {
     errors.push('Password must contain at least one special character');
   }
-  
+
   return {
     isValid: errors.length === 0,
     errors,
@@ -111,21 +111,21 @@ export const validatePastDate = (date: string): boolean => {
 };
 
 // Form validation helper
-export const validateForm = <T extends Record<string, any>>(
+export const validateForm = <T extends Record<string, unknown>>(
   data: T,
-  rules: Record<keyof T, (value: any) => string | null>
+  rules: Record<keyof T, (value: unknown) => string | null>
 ): Record<keyof T, string> => {
   const errors: Record<keyof T, string> = {} as Record<keyof T, string>;
-  
+
   Object.keys(rules).forEach((key) => {
     const field = key as keyof T;
     const validator = rules[field];
     const error = validator(data[field]);
-    
+
     if (error) {
       errors[field] = error;
     }
   });
-  
+
   return errors;
 };

@@ -5,7 +5,7 @@ import { logger } from './logger';
 // Input sanitization
 export function sanitizeInput(input: string): string {
   if (typeof input !== 'string') return '';
-  
+
   return input
     .trim()
     .replace(/[<>]/g, '') // Remove potential HTML tags
@@ -17,10 +17,10 @@ export function sanitizeInput(input: string): string {
 // HTML sanitization
 export function sanitizeHTML(html: string): string {
   if (typeof html !== 'string') return '';
-  
+
   const allowedTags = ['b', 'i', 'em', 'strong', 'p', 'br'];
   const allowedAttributes = ['href', 'title'];
-  
+
   // Simple HTML sanitization - in production, use a library like DOMPurify
   return html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -31,7 +31,7 @@ export function sanitizeHTML(html: string): string {
 // XSS prevention
 export function escapeHTML(str: string): string {
   if (typeof str !== 'string') return '';
-  
+
   const map: Record<string, string> = {
     '&': '&amp;',
     '<': '&lt;',
@@ -40,7 +40,7 @@ export function escapeHTML(str: string): string {
     "'": '&#39;',
     '/': '&#x2F;',
   };
-  
+
   return str.replace(/[&<>"'/]/g, (s) => map[s]);
 }
 
@@ -71,19 +71,19 @@ class RateLimiter {
   isAllowed(identifier: string): boolean {
     const now = Date.now();
     const requests = this.requests.get(identifier) || [];
-    
+
     // Remove old requests outside the window
     const validRequests = requests.filter(time => now - time < this.windowMs);
-    
+
     if (validRequests.length >= this.maxRequests) {
       logger.warn('Rate limit exceeded', { identifier, requests: validRequests.length });
       return false;
     }
-    
+
     // Add current request
     validRequests.push(now);
     this.requests.set(identifier, validRequests);
-    
+
     return true;
   }
 
@@ -91,7 +91,7 @@ class RateLimiter {
     const now = Date.now();
     const requests = this.requests.get(identifier) || [];
     const validRequests = requests.filter(time => now - time < this.windowMs);
-    
+
     return Math.max(0, this.maxRequests - validRequests.length);
   }
 
@@ -99,9 +99,9 @@ class RateLimiter {
     const now = Date.now();
     const requests = this.requests.get(identifier) || [];
     const validRequests = requests.filter(time => now - time < this.windowMs);
-    
+
     if (validRequests.length === 0) return 0;
-    
+
     const oldestRequest = Math.min(...validRequests);
     return oldestRequest + this.windowMs;
   }
@@ -122,7 +122,7 @@ export function getCSPHeader(): string {
     "base-uri 'self'",
     "form-action 'self'",
   ];
-  
+
   return directives.join('; ');
 }
 
@@ -187,7 +187,7 @@ export function validatePasswordStrength(password: string): {
     'password', '123456', '123456789', 'qwerty', 'abc123',
     'password123', 'admin', 'letmein', 'welcome', 'monkey'
   ];
-  
+
   if (commonPasswords.includes(password.toLowerCase())) {
     score -= 2;
     feedback.push('Password is too common');
@@ -203,7 +203,7 @@ export function validatePasswordStrength(password: string): {
 // SQL injection prevention
 export function sanitizeSQLInput(input: string): string {
   if (typeof input !== 'string') return '';
-  
+
   return input
     .replace(/['"\\]/g, '') // Remove quotes and backslashes
     .replace(/--/g, '') // Remove SQL comments
@@ -243,7 +243,7 @@ export function validateFileUpload(file: File): {
   // Check file extension
   const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.pdf', '.txt'];
   const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-  
+
   if (!allowedExtensions.includes(extension)) {
     return {
       isValid: false,
@@ -265,12 +265,12 @@ export function generateSecureSessionId(): string {
 export function isValidIP(ip: string): boolean {
   const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
   const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
-  
+
   return ipv4Regex.test(ip) || ipv6Regex.test(ip);
 }
 
 // Log security events
-export function logSecurityEvent(event: string, details: Record<string, any>): void {
+export function logSecurityEvent(event: string, details: Record<string, unknown>): void {
   logger.warn('Security Event', {
     event,
     timestamp: new Date().toISOString(),

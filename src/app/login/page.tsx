@@ -22,7 +22,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   const { addNotification } = useNotifications();
   const router = useRouter();
 
@@ -60,7 +60,7 @@ export default function LoginPage() {
               // Save user details to localStorage
               localStorage.setItem('user_data', JSON.stringify(meResponse.data));
             }
-          } catch (meError) {
+          } catch {
             // Continue with login even if /me fails - user can still access the app
           }
 

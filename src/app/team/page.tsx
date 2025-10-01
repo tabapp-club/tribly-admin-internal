@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ImprovedInput } from '@/components/ui/ImprovedInput';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import DataTable from '@/components/ui/DataTable';
@@ -197,7 +199,7 @@ export default function TeamOverviewPage() {
     {
       key: 'member',
       label: 'Team Member',
-      render: (value: any, row: TeamMember) => (
+      render: (value: unknown, row: TeamMember) => (
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
             <AvatarImage src={row.avatar} />
@@ -215,7 +217,7 @@ export default function TeamOverviewPage() {
     {
       key: 'role',
       label: 'Role',
-      render: (value: any, row: TeamMember) => (
+      render: (value: unknown, row: TeamMember) => (
         <Badge className={getRoleColor(row.role)}>
           {row.role.charAt(0).toUpperCase() + row.role.slice(1)}
         </Badge>
@@ -224,14 +226,14 @@ export default function TeamOverviewPage() {
     {
       key: 'department',
       label: 'Department',
-      render: (value: any, row: TeamMember) => (
+      render: (value: unknown, row: TeamMember) => (
         <span className="text-sm text-gray-600">{row.department}</span>
       )
     },
     {
       key: 'performance',
       label: 'Performance',
-      render: (value: any, row: TeamMember) => (
+      render: (value: unknown, row: TeamMember) => (
         <div className="text-sm">
           <div className={`font-medium ${getPerformanceColor(row.performance.conversionRate)}`}>
             {row.performance.conversionRate}%
@@ -243,7 +245,7 @@ export default function TeamOverviewPage() {
     {
       key: 'revenue',
       label: 'Revenue',
-      render: (value: any, row: TeamMember) => (
+      render: (value: unknown, row: TeamMember) => (
         <div className="text-sm font-medium text-gray-900">
           ${row.performance.totalRevenue.toLocaleString()}
         </div>
@@ -252,7 +254,7 @@ export default function TeamOverviewPage() {
     {
       key: 'status',
       label: 'Status',
-      render: (value: any, row: TeamMember) => (
+      render: (value: unknown, row: TeamMember) => (
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${row.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
           <span className="text-sm text-gray-600">
@@ -264,7 +266,7 @@ export default function TeamOverviewPage() {
     {
       key: 'actions',
       label: 'Actions',
-      render: (value: any, row: TeamMember) => (
+      render: (value: unknown, row: TeamMember) => (
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"

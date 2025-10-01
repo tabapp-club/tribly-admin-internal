@@ -6,13 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import ProfileDropdown from '@/components/ui/ProfileDropdown';
 import {
   Building2,
-  Users,
   Coffee,
-  BarChart3,
-  Target,
-  TrendingUp,
-  DollarSign,
-  CheckCircle
+  BarChart3
 } from 'lucide-react';
 
 export default function Home() {
@@ -92,7 +87,7 @@ export default function Home() {
 
           {/* Mobile Cards - Stack vertically */}
           <div className="space-y-4">
-            {dashboardCards.map((card, index) => (
+            {dashboardCards.map((card) => (
               <Card
                 key={card.title}
                 className="h-[180px] w-4/5 mx-auto cursor-pointer transition-all duration-200 border border-gray-200 shadow-none"

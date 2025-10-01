@@ -6,7 +6,7 @@ interface LogEntry {
   level: LogLevel;
   message: string;
   timestamp: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   error?: Error;
 }
 
@@ -31,27 +31,27 @@ class Logger {
 
   private formatLog(entry: LogEntry): string {
     const { level, message, timestamp, context, error } = entry;
-    
+
     let logMessage = `[${timestamp}] ${level.toUpperCase()}: ${message}`;
-    
+
     if (context && Object.keys(context).length > 0) {
       logMessage += `\nContext: ${JSON.stringify(context, null, 2)}`;
     }
-    
+
     if (error) {
       logMessage += `\nError: ${error.message}`;
       if (error.stack) {
         logMessage += `\nStack: ${error.stack}`;
       }
     }
-    
+
     return logMessage;
   }
 
   private createLogEntry(
     level: LogLevel,
     message: string,
-    context?: Record<string, any>,
+    context?: Record<string, unknown>,
     error?: Error
   ): LogEntry {
     return {
@@ -103,19 +103,19 @@ class Logger {
     }
   }
 
-  debug(message: string, context?: Record<string, any>): void {
+  debug(message: string, context?: Record<string, unknown>): void {
     this.log(this.createLogEntry('debug', message, context));
   }
 
-  info(message: string, context?: Record<string, any>): void {
+  info(message: string, context?: Record<string, unknown>): void {
     this.log(this.createLogEntry('info', message, context));
   }
 
-  warn(message: string, context?: Record<string, any>): void {
+  warn(message: string, context?: Record<string, unknown>): void {
     this.log(this.createLogEntry('warn', message, context));
   }
 
-  error(message: string, error?: Error, context?: Record<string, any>): void {
+  error(message: string, error?: Error, context?: Record<string, unknown>): void {
     this.log(this.createLogEntry('error', message, context, error));
   }
 
@@ -143,7 +143,7 @@ class Logger {
   }
 
   // User action logging
-  logUserAction(action: string, userId?: string, context?: Record<string, any>): void {
+  logUserAction(action: string, userId?: string, context?: Record<string, unknown>): void {
     this.info('User Action', {
       action,
       userId,

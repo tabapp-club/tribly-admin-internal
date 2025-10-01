@@ -6,7 +6,7 @@ interface PerformanceMetric {
   name: string;
   duration: number;
   timestamp: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 class PerformanceMonitor {
@@ -25,7 +25,7 @@ class PerformanceMonitor {
   }
 
   // End timing and record metric
-  endTiming(name: string, metadata?: Record<string, any>): number {
+  endTiming(name: string, metadata?: Record<string, unknown>): number {
     const startTime = this.timers.get(name);
     if (!startTime) {
       logger.warn(`No start time found for metric: ${name}`);
@@ -35,12 +35,12 @@ class PerformanceMonitor {
     const duration = performance.now() - startTime;
     this.recordMetric(name, duration, metadata);
     this.timers.delete(name);
-    
+
     return duration;
   }
 
   // Record a custom metric
-  recordMetric(name: string, duration: number, metadata?: Record<string, any>): void {
+  recordMetric(name: string, duration: number, metadata?: Record<string, unknown>): void {
     const metric: PerformanceMetric = {
       name,
       duration,
@@ -64,7 +64,7 @@ class PerformanceMonitor {
   getAverageDuration(name: string): number {
     const metrics = this.getMetrics(name);
     if (metrics.length === 0) return 0;
-    
+
     const total = metrics.reduce((sum, metric) => sum + metric.duration, 0);
     return total / metrics.length;
   }
@@ -82,13 +82,13 @@ class PerformanceMonitor {
 
     // Largest Contentful Paint
     this.observeLCP();
-    
+
     // First Input Delay
     this.observeFID();
-    
+
     // Cumulative Layout Shift
     this.observeCLS();
-    
+
     // First Contentful Paint
     this.observeFCP();
   }
@@ -103,7 +103,7 @@ class PerformanceMonitor {
           url: lastEntry.url,
         });
       });
-      
+
       observer.observe({ entryTypes: ['largest-contentful-paint'] });
       this.observers.push(observer);
     }
@@ -119,7 +119,7 @@ class PerformanceMonitor {
           });
         });
       });
-      
+
       observer.observe({ entryTypes: ['first-input'] });
       this.observers.push(observer);
     }
@@ -137,7 +137,7 @@ class PerformanceMonitor {
         });
         this.recordMetric('CLS', clsValue);
       });
-      
+
       observer.observe({ entryTypes: ['layout-shift'] });
       this.observers.push(observer);
     }
@@ -151,7 +151,7 @@ class PerformanceMonitor {
           this.recordMetric('FCP', entry.startTime);
         });
       });
-      
+
       observer.observe({ entryTypes: ['paint'] });
       this.observers.push(observer);
     }
@@ -177,10 +177,10 @@ class PerformanceMonitor {
   monitorApiCall<T>(
     apiCall: () => Promise<T>,
     name: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<T> {
     this.startTiming(name);
-    
+
     return apiCall()
       .then((result) => {
         this.endTiming(name, { ...metadata, success: true });
@@ -200,9 +200,9 @@ class PerformanceMonitor {
   }
 
   // Get performance summary
-  getPerformanceSummary(): Record<string, any> {
-    const summary: Record<string, any> = {};
-    
+  getPerformanceSummary(): Record<string, unknown> {
+    const summary: Record<string, unknown> = {};
+
     // Group metrics by name
     const groupedMetrics = this.metrics.reduce((acc, metric) => {
       if (!acc[metric.name]) {
@@ -244,11 +244,11 @@ export function usePerformanceMonitor(componentName: string) {
     performanceMonitor.startTiming(`${componentName}_${metricName}`);
   };
 
-  const endTiming = (metricName: string, metadata?: Record<string, any>) => {
+  const endTiming = (metricName: string, metadata?: Record<string, unknown>) => {
     return performanceMonitor.endTiming(`${componentName}_${metricName}`, metadata);
   };
 
-  const recordMetric = (metricName: string, duration: number, metadata?: Record<string, any>) => {
+  const recordMetric = (metricName: string, duration: number, metadata?: Record<string, unknown>) => {
     performanceMonitor.recordMetric(`${componentName}_${metricName}`, duration, metadata);
   };
 
