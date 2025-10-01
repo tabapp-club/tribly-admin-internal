@@ -194,7 +194,6 @@ export async function reportError(error: AppError, context?: Record<string, any>
     // In production, send to error reporting service
     if (process.env.NODE_ENV === 'production') {
       // Example: Sentry.captureException(error, { extra: context });
-      console.log('Error reported to service:', { error, context });
     }
   } catch (reportingError) {
     logger.error('Failed to report error', reportingError as Error);

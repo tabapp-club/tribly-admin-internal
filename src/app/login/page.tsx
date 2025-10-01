@@ -29,7 +29,6 @@ export default function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
-      console.log('User is authenticated, redirecting to dashboard');
       router.push('/');
     }
   }, [isAuthenticated, authLoading, router]);
@@ -44,7 +43,6 @@ export default function LoginPage() {
       // Call login API
       const loginResponse = await authApi.login(email, password) as LoginResponse;
 
-      console.log('Login response:', loginResponse);
 
       // Check if login was successful
       if (loginResponse.data && loginResponse.data.status) {
@@ -57,25 +55,19 @@ export default function LoginPage() {
           // Call /me API to get user details
           try {
             const meResponse = await authApi.getMe();
-            console.log('Me response:', meResponse);
 
             if (meResponse.data) {
               // Save user details to localStorage
               localStorage.setItem('user_data', JSON.stringify(meResponse.data));
-              console.log('User data saved to localStorage');
             }
           } catch (meError) {
-            console.warn('Failed to fetch user details from /me API:', meError);
             // Continue with login even if /me fails - user can still access the app
           }
 
           // Update auth context
-          console.log('Calling login context with:', email);
           await login(email, password);
-          console.log('Login context completed');
 
           // Check auth state after login
-          console.log('Auth state after login:', { user, isAuthenticated, isLoading: authLoading });
 
           addNotification({
             title: 'Welcome!',
@@ -84,7 +76,6 @@ export default function LoginPage() {
             isRead: false
           });
 
-          console.log('Redirecting to dashboard');
           // Small delay to ensure state updates
           setTimeout(() => {
             router.push('/');

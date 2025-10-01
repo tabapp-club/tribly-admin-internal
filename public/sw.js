@@ -16,11 +16,9 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Opened cache');
         return cache.addAll(urlsToCache);
       })
       .catch((error) => {
-        console.error('Cache installation failed:', error);
       })
   );
 });
@@ -70,7 +68,6 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -88,7 +85,6 @@ self.addEventListener('sync', (event) => {
 
 async function doBackgroundSync() {
   // Handle offline actions when connection is restored
-  console.log('Background sync triggered');
   // Add your offline action handling logic here
 }
 

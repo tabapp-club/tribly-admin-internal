@@ -13,7 +13,6 @@ export function migrateLocalStorageData() {
       } catch {
         // If it fails to parse, it's a plain string - keep it as is
         // This is actually the correct format for tokens
-        console.log('Auth token is already in correct string format');
       }
     }
 
@@ -25,7 +24,6 @@ export function migrateLocalStorageData() {
         // If it parses successfully, it's already JSON - no migration needed
       } catch (error) {
         // If it fails to parse, remove it as it's corrupted
-        console.warn('Corrupted user_data found, removing:', error);
         localStorage.removeItem('user_data');
       }
     }
@@ -40,7 +38,6 @@ export function migrateLocalStorageData() {
     });
 
   } catch (error) {
-    console.error('Error during localStorage migration:', error);
   }
 }
 

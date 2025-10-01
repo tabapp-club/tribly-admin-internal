@@ -123,7 +123,6 @@ export default function ProfileDropdown({ className = '' }: ProfileDropdownProps
         }
         return [];
       } catch (error) {
-        console.warn('Error processing permissions:', error);
         return [];
       }
     })()

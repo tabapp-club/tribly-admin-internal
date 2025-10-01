@@ -48,16 +48,6 @@ class ApiClient {
       },
     };
 
-    // Debug logging for auth headers
-    if (endpoint.includes('/admin/')) {
-      console.log('🔐 API Request with Auth:', {
-        endpoint,
-        url,
-        hasToken: !!token,
-        tokenPreview: token ? `${token.substring(0, 20)}...` : 'No token',
-        headers: config.headers
-      });
-    }
 
     try {
       const response = await fetch(url, config);
@@ -90,16 +80,6 @@ class ApiClient {
     const token = localStorage.getItem('auth_token');
     const hasToken = token && token.trim() !== '';
 
-    // Debug logging for token retrieval
-    if (hasToken) {
-      console.log('🔑 Auth token retrieved:', {
-        tokenPreview: `${token.substring(0, 20)}...`,
-        tokenLength: token.length,
-        isValid: token.trim() !== ''
-      });
-    } else {
-      console.log('❌ No auth token found in localStorage');
-    }
 
     return hasToken ? token : null;
   }
@@ -203,10 +183,6 @@ export const businessApi = {
     features?: { [key: string]: boolean };
     is_deleted?: boolean;
   }) => {
-    console.log('🌐 businessApi.updateBusiness called');
-    console.log('🆔 ID:', id);
-    console.log('📊 Data:', data);
-    console.log('🔗 Endpoint:', `/businesses/${id}`);
     return apiClient.patch(`/dashboard/v1/admin/businesses/${id}`, data);
   },
 

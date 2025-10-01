@@ -103,12 +103,10 @@ export default function BusinessOverviewClient() {
     is_deleted?: boolean;
   }): Business => {
     // Convert features object to array of enabled feature names
-    console.log('🔍 API features received:', apiBusiness.features);
     const enabledFeatures = apiBusiness.features && typeof apiBusiness.features === 'object'
       ? Object.entries(apiBusiness.features)
           .filter(([, enabled]) => enabled === true)
           .map(([feature]) => {
-            console.log('🔍 Processing feature:', feature, 'enabled:', true);
             // Convert snake_case to readable format
             const featureMap: { [key: string]: string } = {
               'dashboard': 'Dashboard',
@@ -121,12 +119,10 @@ export default function BusinessOverviewClient() {
               'campaigns': 'Campaigns'
             };
             const mappedFeature = featureMap[feature] || feature;
-            console.log('🔍 Mapped feature:', feature, '→', mappedFeature);
             return mappedFeature;
           })
       : ['Tribly AI for Business']; // Default fallback
 
-    console.log('🔍 Final enabled features:', enabledFeatures);
 
     // Map business_plan to userType
     const getUserType = (plan: string) => {
@@ -178,36 +174,29 @@ export default function BusinessOverviewClient() {
   useEffect(() => {
     const loadBusinesses = async () => {
       try {
-        console.log('🔄 Loading businesses from API...');
 
         // Try to fetch from API first
         try {
           const response = await businessApi.getOnboardedBusinesses();
-          console.log('📥 API Response:', response);
 
           // Check if response is an array (API returns businesses array directly)
           if (Array.isArray(response)) {
-            console.log('✅ Loaded businesses from API:', response);
 
             // Map API response to component format
             const mappedBusinesses = response.map(mapApiBusinessToComponent);
 
-            console.log('📊 Mapped businesses:', mappedBusinesses);
             setBusinesses(mappedBusinesses);
             return; // Success, exit early
           } else if (response && response.data && Array.isArray(response.data)) {
             // Fallback: check if response has data property
-            console.log('✅ Loaded businesses from API (with data property):', response.data);
 
             // Map API response to component format
             const mappedBusinesses = response.data.map(mapApiBusinessToComponent);
 
-            console.log('📊 Mapped businesses:', mappedBusinesses);
             setBusinesses(mappedBusinesses);
             return; // Success, exit early
           }
         } catch (apiError) {
-          console.warn('⚠️ API call failed, falling back to localStorage:', apiError);
         }
 
         // Fallback to localStorage if API fails
@@ -215,17 +204,14 @@ export default function BusinessOverviewClient() {
         if (storedBusinesses) {
           try {
             const parsedBusinesses = JSON.parse(storedBusinesses);
-            console.log('📦 Loaded businesses from localStorage:', parsedBusinesses);
             setBusinesses(Array.isArray(parsedBusinesses) ? parsedBusinesses : []);
           } catch (parseError) {
-            console.error('❌ Error parsing businesses from localStorage:', parseError);
             setBusinesses([]);
           }
         } else {
           setBusinesses([]);
         }
       } catch (error) {
-        console.error('❌ Error loading businesses:', error);
       } finally {
         setIsLoading(false);
       }
@@ -238,51 +224,35 @@ export default function BusinessOverviewClient() {
   const refreshBusinesses = async () => {
     setIsRefreshing(true);
     try {
-      console.log('🔄 Refreshing businesses from API...');
       const response = await businessApi.getOnboardedBusinesses();
-      console.log('📥 Refresh API Response:', response);
 
       // Check if response is an array (API returns businesses array directly)
       if (Array.isArray(response)) {
-        console.log('✅ Refreshed businesses from API:', response);
 
         // Map API response to component format
         const mappedBusinesses = response.map(mapApiBusinessToComponent);
 
-        console.log('📊 Refreshed mapped businesses:', mappedBusinesses);
-        console.log('🔄 Setting businesses state with', mappedBusinesses.length, 'businesses');
         setBusinesses(mappedBusinesses);
 
         // Verify the state was updated
         setTimeout(() => {
-          console.log('🔍 Current businesses state after refresh:', businesses);
         }, 100);
       } else if (response && response.data && Array.isArray(response.data)) {
         // Fallback: check if response has data property
-        console.log('✅ Refreshed businesses from API (with data property):', response.data);
 
         // Map API response to component format
         const mappedBusinesses = response.data.map(mapApiBusinessToComponent);
 
-        console.log('📊 Refreshed mapped businesses:', mappedBusinesses);
-        console.log('🔄 Setting businesses state with', mappedBusinesses.length, 'businesses');
         setBusinesses(mappedBusinesses);
 
         // Verify the state was updated
         setTimeout(() => {
-          console.log('🔍 Current businesses state after refresh:', businesses);
         }, 100);
       } else {
-        console.warn('⚠️ Invalid API response structure:', response);
-        console.log('🔍 Response type:', typeof response);
-        console.log('🔍 Is array:', Array.isArray(response));
-        console.log('🔍 Has data property:', !!(response && response.data));
         if (response && response.data) {
-          console.log('🔍 Data is array:', Array.isArray(response.data));
         }
       }
     } catch (error) {
-      console.error('❌ Error refreshing businesses from API:', error);
       addNotification({
         title: 'Refresh Failed',
         message: 'Failed to refresh business data. Please try again.',
@@ -302,29 +272,18 @@ export default function BusinessOverviewClient() {
     features?: { [key: string]: boolean };
     is_deleted?: boolean;
   }) => {
-    console.log('🔄 updateBusiness function called');
-    console.log('🆔 Business ID:', businessId);
-    console.log('📊 Update Data:', updateData);
 
     setIsUpdating(true);
     try {
-      console.log('🔄 Updating business:', businessId, updateData);
-      console.log('🌐 Calling businessApi.updateBusiness...');
       const response = await businessApi.updateBusiness(businessId, updateData);
-      console.log('📥 Update API Response:', response);
 
       // Check if the update was successful (API returns the updated business object directly)
       if (response) {
-        console.log('✅ Business updated successfully');
-        console.log('📊 Update response:', response);
 
         // Refresh the businesses list to get updated data
-        console.log('🔄 Calling refreshBusinesses after successful update...');
         try {
           await refreshBusinesses();
-          console.log('✅ refreshBusinesses completed successfully');
         } catch (refreshError) {
-          console.error('❌ Error during refreshBusinesses:', refreshError);
         }
 
         addNotification({
@@ -334,10 +293,8 @@ export default function BusinessOverviewClient() {
           isRead: false
         });
       } else {
-        console.warn('⚠️ Update API response is null or undefined:', response);
       }
     } catch (error) {
-      console.error('❌ Error updating business:', error);
       addNotification({
         title: 'Update Failed',
         message: 'Failed to update business information. Please try again.',
@@ -388,7 +345,6 @@ export default function BusinessOverviewClient() {
       // Call update API
       await updateBusiness(businessId, { features: updatedFeatures });
     } catch (error) {
-      console.error('Error toggling feature:', error);
     }
   };
 
@@ -408,7 +364,6 @@ export default function BusinessOverviewClient() {
           const parsedBusinesses = JSON.parse(e.newValue);
           setBusinesses(Array.isArray(parsedBusinesses) ? parsedBusinesses : []);
         } catch (error) {
-          console.error('Error parsing updated businesses from localStorage:', error);
           setBusinesses([]);
         }
       }
@@ -424,7 +379,6 @@ export default function BusinessOverviewClient() {
             setBusinesses(parsedBusinesses);
           }
         } catch (error) {
-          console.error('Error refreshing businesses on visibility change:', error);
         }
       }
     };
@@ -442,22 +396,12 @@ export default function BusinessOverviewClient() {
 
   // Debug: Monitor changes to editingBusiness state
   useEffect(() => {
-    console.log('🔍 editingBusiness state changed:', editingBusiness);
-    console.log('🔍 editingBusiness type:', typeof editingBusiness);
-    console.log('🔍 editingBusiness === null:', editingBusiness === null);
-    console.log('🔍 editingBusiness === undefined:', editingBusiness === undefined);
     if (editingBusiness) {
-      console.log('🔍 editingBusiness.id:', editingBusiness.id);
-      console.log('🔍 editingBusiness.name:', editingBusiness.name);
     }
   }, [editingBusiness]);
 
   // Debug: Monitor changes to businesses state
   useEffect(() => {
-    console.log('🔍 businesses state changed:', businesses);
-    console.log('🔍 businesses count:', businesses?.length || 0);
-    console.log('🔍 businesses type:', typeof businesses);
-    console.log('🔍 businesses is array:', Array.isArray(businesses));
   }, [businesses]);
 
   const getStatusBadge = (status: string) => {
@@ -553,8 +497,6 @@ export default function BusinessOverviewClient() {
   };
 
   const handleEditBusiness = (business: Business) => {
-    console.log('✏️ handleEditBusiness called with:', business);
-    console.log('✏️ Setting editingBusiness to:', business);
     setEditingBusiness(business);
     setEditFormData({
       name: business.name,
@@ -565,34 +507,12 @@ export default function BusinessOverviewClient() {
       assignedTo: business.assignedTo,
       features: [...business.features]
     });
-    console.log('📝 Edit form data set:', {
-      name: business.name,
-      industry: business.industry,
-      status: business.status,
-      userType: business.userType,
-      subscription: business.subscription,
-      assignedTo: business.assignedTo,
-      features: [...business.features]
-    });
     setIsEditDialogOpen(true);
-    console.log('📂 Edit dialog opened');
-    console.log('📂 Current editingBusiness state after setting:', editingBusiness);
   };
 
   const handleSaveEdit = async () => {
-    console.log('🔄 handleSaveEdit called');
-    console.log('📋 editingBusiness:', editingBusiness);
-    console.log('📋 editingBusiness type:', typeof editingBusiness);
-    console.log('📋 editingBusiness === null:', editingBusiness === null);
-    console.log('📋 editingBusiness === undefined:', editingBusiness === undefined);
-    console.log('📝 editFormData:', editFormData);
 
     if (!editingBusiness) {
-      console.log('❌ No editingBusiness, returning');
-      console.log('❌ Current state values:');
-      console.log('  - isEditDialogOpen:', isEditDialogOpen);
-      console.log('  - editingBusiness:', editingBusiness);
-      console.log('  - editFormData:', editFormData);
       return;
     }
 
@@ -610,33 +530,22 @@ export default function BusinessOverviewClient() {
       // Only include changed fields
       if (editFormData.name !== editingBusiness.name) {
         updateData.name = editFormData.name;
-        console.log('📝 Name changed:', editingBusiness.name, '→', editFormData.name);
       }
       if (editFormData.status !== editingBusiness.status) {
         updateData.status = editFormData.status;
-        console.log('📝 Status changed:', editingBusiness.status, '→', editFormData.status);
       }
       if (editFormData.industry !== editingBusiness.industry) {
         updateData.industry = editFormData.industry;
-        console.log('📝 Industry changed:', editingBusiness.industry, '→', editFormData.industry);
       }
       if (editFormData.userType !== editingBusiness.userType) {
         updateData.business_plan = editFormData.userType;
-        console.log('📝 UserType changed:', editingBusiness.userType, '→', editFormData.userType);
       }
 
       // Check for features changes
-      console.log('🔍 Comparing features:');
-      console.log('  Original features:', editingBusiness.features);
-      console.log('  Form features:', editFormData.features);
-      console.log('  Original sorted:', editingBusiness.features.sort());
-      console.log('  Form sorted:', editFormData.features.sort());
 
       const featuresChanged = JSON.stringify(editFormData.features.sort()) !== JSON.stringify(editingBusiness.features.sort());
-      console.log('  Features changed:', featuresChanged);
 
       if (featuresChanged) {
-        console.log('📝 Features changed:', editingBusiness.features, '→', editFormData.features);
 
         // Convert features array back to API format
         const featureMap: { [key: string]: string } = {
@@ -666,27 +575,21 @@ export default function BusinessOverviewClient() {
         });
 
         updateData.features = apiFeatures;
-        console.log('📝 API Features prepared:', apiFeatures);
       }
 
-      console.log('📊 Update data prepared:', updateData);
-      console.log('🔢 Number of changes:', Object.keys(updateData).length);
 
       // Only make API call if there are changes
       if (Object.keys(updateData).length > 0) {
-        console.log('🚀 Making API call with updateData:', updateData);
         await updateBusiness(editingBusiness.id, updateData);
         // Close dialog and reset state after successful update
         setIsEditDialogOpen(false);
         setEditingBusiness(null);
       } else {
-        console.log('ℹ️ No changes detected, closing dialog');
         // No changes, just close the dialog
         setIsEditDialogOpen(false);
         setEditingBusiness(null);
       }
     } catch (error) {
-      console.error('❌ Error saving business:', error);
     }
   };
 
@@ -705,15 +608,12 @@ export default function BusinessOverviewClient() {
   };
 
   const handleFeatureToggle = (feature: string) => {
-    console.log('🔄 handleFeatureToggle called with feature:', feature);
-    console.log('📝 Current features before toggle:', editFormData.features);
 
     setEditFormData(prev => {
       const newFeatures = prev.features.includes(feature)
         ? prev.features.filter(f => f !== feature)
         : [...prev.features, feature];
 
-      console.log('📝 New features after toggle:', newFeatures);
       return {
         ...prev,
         features: newFeatures
@@ -723,7 +623,6 @@ export default function BusinessOverviewClient() {
 
   const handleDeleteBusiness = async () => {
     if (!editingBusiness) {
-      console.error('No business selected for deletion');
       return;
     }
 
@@ -731,14 +630,12 @@ export default function BusinessOverviewClient() {
       // Validate business exists in current list
       const businessExists = businesses.some(b => b.id === editingBusiness.id);
       if (!businessExists) {
-        console.error('Business not found in current list');
         setIsDeleteDialogOpen(false);
         setIsEditDialogOpen(false);
         setEditingBusiness(null);
         return;
       }
 
-      console.log('🗑️ Deleting business:', editingBusiness.id, editingBusiness.name);
 
       // Call API to mark business as deleted
       const response = await businessApi.updateBusiness(editingBusiness.id, {
@@ -746,15 +643,11 @@ export default function BusinessOverviewClient() {
       });
 
       if (response) {
-        console.log('✅ Business marked as deleted successfully');
 
         // Refresh the businesses list to get updated data
-        console.log('🔄 Refreshing businesses after deletion...');
         try {
           await refreshBusinesses();
-          console.log('✅ refreshBusinesses completed after deletion');
         } catch (refreshError) {
-          console.error('❌ Error during refreshBusinesses after deletion:', refreshError);
         }
 
         // Close dialogs
@@ -781,9 +674,7 @@ export default function BusinessOverviewClient() {
           isRead: false
         });
 
-        console.log(`Business "${editingBusiness.name}" deleted successfully`);
       } else {
-        console.warn('⚠️ Delete API response is null or undefined:', response);
         addNotification({
           title: 'Delete Failed',
           message: 'Failed to delete business. Please try again.',
@@ -793,7 +684,6 @@ export default function BusinessOverviewClient() {
       }
 
     } catch (error) {
-      console.error('❌ Error deleting business:', error);
       addNotification({
         title: 'Delete Failed',
         message: 'Failed to delete business. Please try again.',
@@ -812,7 +702,6 @@ export default function BusinessOverviewClient() {
       setIsDeleteDialogOpen(false);
     } else if (!editingBusiness) {
       // Prevent opening delete dialog if no business is selected
-      console.warn('Cannot open delete dialog: no business selected');
       return;
     } else {
       setIsDeleteDialogOpen(true);
@@ -1546,25 +1435,8 @@ export default function BusinessOverviewClient() {
                 <Button variant="outline" onClick={handleCancelEdit}>
                   Cancel
                 </Button>
-                <Button onClick={() => {
-                  console.log('🖱️ Save Changes button clicked');
-                  console.log('🖱️ Current editingBusiness before handleSaveEdit:', editingBusiness);
-                  console.log('🖱️ Current editingBusiness type:', typeof editingBusiness);
-                  console.log('🖱️ Current editingBusiness === null:', editingBusiness === null);
-                  handleSaveEdit();
-                }}>
+                <Button onClick={handleSaveEdit}>
                   Save Changes
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    console.log('🧪 Test API call button clicked');
-                    if (editingBusiness) {
-                      updateBusiness(editingBusiness.id, { name: 'Test Update' });
-                    }
-                  }}
-                >
-                  Test API
                 </Button>
               </div>
             </DialogFooter>

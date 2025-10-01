@@ -115,7 +115,6 @@ export default function SettingsPage() {
         const response = await authApi.getMe();
         if (response.data) {
           const userData = response.data;
-          console.log('User data from /me endpoint:', userData);
 
           // Extract first and last name from the user data
           const nameParts = userData.name?.split(' ') || ['', ''];
@@ -129,11 +128,9 @@ export default function SettingsPage() {
             password: '' // Always start with empty password
           };
 
-          console.log('Setting profile settings:', newProfileSettings);
           setProfileSettings(newProfileSettings);
         }
       } catch (error) {
-        console.error('Failed to fetch user data from /me endpoint:', error);
         // Fallback to user data from context
         if (user) {
           const nameParts = user.name?.split(' ') || ['', ''];
@@ -210,9 +207,7 @@ export default function SettingsPage() {
         if (profileSettings.department) updateData.department = profileSettings.department;
 
         // Call the API
-        console.log('🔐 Calling updateProfile API with data:', updateData);
         const response = await authApi.updateProfile(updateData);
-        console.log('✅ UpdateProfile API response:', response);
 
         // Update local user data
         updateUser({
@@ -239,7 +234,6 @@ export default function SettingsPage() {
         });
       }
     } catch (error: any) {
-      console.error('Profile update error:', error);
       addNotification({
         title: 'Save Failed',
         message: error?.message || 'Failed to save settings. Please try again.',
@@ -261,7 +255,6 @@ export default function SettingsPage() {
       const response = await authApi.getMe();
       if (response.data) {
         const userData = response.data;
-        console.log('Refreshed user data from /me endpoint:', userData);
 
         const nameParts = userData.name?.split(' ') || ['', ''];
         const newProfileSettings = {
@@ -283,7 +276,6 @@ export default function SettingsPage() {
         });
       }
     } catch (error) {
-      console.error('Failed to refresh user data:', error);
       addNotification({
         title: 'Refresh Failed',
         message: 'Could not refresh profile data. Please try again.',

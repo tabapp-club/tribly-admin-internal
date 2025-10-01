@@ -42,7 +42,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
         }
       } catch (error) {
-        console.error('Auth check failed:', error);
         // Authentication failed, user needs to login
         setUser(null);
       } finally {
@@ -88,13 +87,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         setUser(parsedUserData);
-        console.log('User set from localStorage:', parsedUserData);
         } else {
           // No valid token or user data found
           throw new Error('No valid authentication data found');
         }
     } catch (error) {
-      console.error('Login context error:', error);
       throw error;
     } finally {
       setIsLoading(false);

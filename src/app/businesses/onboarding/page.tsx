@@ -525,14 +525,10 @@ export default function BusinessOnboardingPage() {
 
   // Enhanced submit handler
   const handleSubmit = useCallback(async () => {
-    console.log('🚀 handleSubmit called');
-    console.log('📋 Current form data:', formData);
 
     const isValid = validateForm();
-    console.log('✅ Form validation result:', isValid);
 
     if (!isValid) {
-      console.log('❌ Form validation failed');
       addNotification({
         title: 'Validation Error',
         message: 'Please fix all validation errors before submitting.',
@@ -542,7 +538,6 @@ export default function BusinessOnboardingPage() {
       return;
     }
 
-    console.log('✅ Form validation passed, starting submission');
     setLoadingState(prev => ({ ...prev, submitting: true }));
 
     try {
@@ -585,26 +580,20 @@ export default function BusinessOnboardingPage() {
         }
       };
 
-      console.log('📤 Sending business data to API:', businessData);
-      console.log('🌐 API Base URL:', process.env.NEXT_PUBLIC_API_URL || 'https://api.tribly.ai');
 
       let response;
       let apiSuccess = false;
 
       try {
         // Call the business creation API
-        console.log('🔄 Calling businessApi.createBusiness...');
         response = await businessApi.createBusiness(businessData);
-        console.log('📥 API Response received:', response);
         apiSuccess = true;
       } catch (apiError) {
-        console.warn('⚠️ API call failed, falling back to local storage:', apiError);
         // API call failed, throw error instead of creating mock response
         throw apiError;
       }
 
       if (response.data) {
-        console.log('✅ Business created successfully:', response.data);
 
         // Save to localStorage for local state management
         try {
@@ -646,7 +635,6 @@ export default function BusinessOnboardingPage() {
             });
           }
         } catch (error) {
-          console.error('Error saving business to localStorage:', error);
         }
       } else {
         throw new Error('No data returned from API');
@@ -660,16 +648,9 @@ export default function BusinessOnboardingPage() {
       });
 
       // Close submit dialog and show success modal
-      console.log('Showing success modal');
       setShowSubmitDialog(false);
       setShowSuccessModal(true);
     } catch (error) {
-      console.error('❌ Submission error:', error);
-      console.error('❌ Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        error
-      });
       addNotification({
         title: 'Submission Failed',
         message: 'Failed to submit the form. Please try again.',
@@ -678,7 +659,6 @@ export default function BusinessOnboardingPage() {
       });
 
       // Show failed modal
-      console.log('❌ Showing failed modal');
       setShowFailedModal(true);
     } finally {
       setLoadingState(prev => ({ ...prev, submitting: false }));
@@ -695,18 +675,6 @@ export default function BusinessOnboardingPage() {
 
   // Confirm submit
   const confirmSubmit = useCallback(() => {
-    console.log('🔔 confirmSubmit called, showing submit dialog');
-    console.log('🔍 Form validation before submit:', {
-      isValid: validateForm(),
-      formData: {
-        brandName: formData.brandName,
-        businessType: formData.businessType,
-        pocName: formData.pocName,
-        pocEmail: formData.pocEmail,
-        pocPhone: formData.pocPhone,
-        pocDesignation: formData.pocDesignation
-      }
-    });
     setShowSubmitDialog(true);
   }, [formData, validateForm]);
 
@@ -740,13 +708,6 @@ export default function BusinessOnboardingPage() {
       case 'primary-poc':
         // All POC fields are required
         const pocValid = !!(formData.pocName && formData.pocEmail && formData.pocPhone && formData.pocDesignation);
-        console.log('POC Validation:', {
-          pocName: formData.pocName,
-          pocEmail: formData.pocEmail,
-          pocPhone: formData.pocPhone,
-          pocDesignation: formData.pocDesignation,
-          isValid: pocValid
-        });
         return pocValid;
       case 'agreements-welcome':
         return true; // This tab doesn't have navigation buttons
@@ -1159,36 +1120,18 @@ export default function BusinessOnboardingPage() {
   };
 
   const handleNext = () => {
-    console.log('🔄 handleNext called, activeTab:', activeTab);
-    console.log('🔍 Button state check:', {
-      submitting: loadingState.submitting,
-      validating: loadingState.validating,
-      isCurrentTabValid: isCurrentTabValid(),
-      formData: {
-        brandName: formData.brandName,
-        businessType: formData.businessType,
-        pocName: formData.pocName,
-        pocEmail: formData.pocEmail,
-        pocPhone: formData.pocPhone,
-        pocDesignation: formData.pocDesignation
-      }
-    });
 
     const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
-    console.log('📍 Current index:', currentIndex, 'Total tabs:', tabs.length);
 
     // If we're on the primary-poc tab, trigger account creation
     if (activeTab === 'primary-poc') {
-      console.log('🎯 Primary POC tab - calling confirmSubmit for account creation');
       confirmSubmit();
       return;
     }
 
     if (currentIndex < tabs.length - 1) {
-      console.log('➡️ Moving to next tab');
       setActiveTab(tabs[currentIndex + 1].id);
     } else {
-      console.log('🏁 Last tab - calling confirmSubmit');
       confirmSubmit();
     }
   };
@@ -1392,16 +1335,7 @@ export default function BusinessOnboardingPage() {
 
                 {/* Next Button */}
                 <button
-                  onClick={(e) => {
-                    console.log('🖱️ Button clicked!', {
-                      activeTab,
-                      isDisabled: loadingState.submitting || loadingState.validating || !isCurrentTabValid(),
-                      submitting: loadingState.submitting,
-                      validating: loadingState.validating,
-                      isValid: isCurrentTabValid()
-                    });
-                    handleNext();
-                  }}
+                  onClick={handleNext}
                   disabled={loadingState.submitting || loadingState.validating || !isCurrentTabValid()}
                   className="bg-[#6E4EFF] box-border flex gap-[8px] h-[48px] items-center justify-center px-[16px] py-[12px] rounded-[4px] w-full sm:w-[218px] hover:bg-[#7856FF] transition-colors sm:ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -1455,16 +1389,7 @@ export default function BusinessOnboardingPage() {
               </button>
 
               <button
-              onClick={(e) => {
-                console.log('🖱️ Second Button clicked!', {
-                  activeTab,
-                  isDisabled: activeTab === 'agreements-welcome' || loadingState.submitting || loadingState.validating || !isCurrentTabValid(),
-                  submitting: loadingState.submitting,
-                  validating: loadingState.validating,
-                  isValid: isCurrentTabValid()
-                });
-                handleNext();
-              }}
+              onClick={handleNext}
                 disabled={activeTab === 'agreements-welcome' || loadingState.submitting || loadingState.validating || !isCurrentTabValid()}
                 className="flex items-center gap-2 px-6 py-3 bg-[#6E4EFF] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex-1 justify-center hover:bg-[#7856FF] transition-colors"
               >
@@ -1550,20 +1475,7 @@ export default function BusinessOnboardingPage() {
                 Review Again
               </AlertDialogCancel>
               <AlertDialogAction
-              onClick={(e) => {
-                console.log('🚀 Final Submit Button clicked!', {
-                  loadingState,
-                  formData: {
-                    brandName: formData.brandName,
-                    businessType: formData.businessType,
-                    pocName: formData.pocName,
-                    pocEmail: formData.pocEmail,
-                    pocPhone: formData.pocPhone,
-                    pocDesignation: formData.pocDesignation
-                  }
-                });
-                handleSubmit();
-              }}
+              onClick={handleSubmit}
                 className="bg-[#6E4EFF] hover:bg-[#7856FF]"
                 disabled={loadingState.submitting}
               >

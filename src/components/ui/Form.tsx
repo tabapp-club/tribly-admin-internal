@@ -102,7 +102,6 @@ export function Form({
         await onSubmit(data);
       }
     } catch (error) {
-      console.error('Form submission error:', error);
     } finally {
       setIsSubmitting(false);
     }

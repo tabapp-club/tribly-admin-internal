@@ -20,7 +20,6 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
         return item as T;
       }
     } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error);
       return initialValue;
     }
   });
@@ -38,7 +37,6 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
         window.localStorage.setItem(key, valueToStoreInLS);
       }
     } catch (error) {
-      console.error(`Error setting localStorage key "${key}":`, error);
     }
   };
 
@@ -49,7 +47,6 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
         window.localStorage.removeItem(key);
       }
     } catch (error) {
-      console.error(`Error removing localStorage key "${key}":`, error);
     }
   };
 
@@ -67,7 +64,6 @@ export function useLocalStorageString(key: string, initialValue: string) {
       const item = window.localStorage.getItem(key);
       return item || initialValue;
     } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error);
       return initialValue;
     }
   });
@@ -81,7 +77,6 @@ export function useLocalStorageString(key: string, initialValue: string) {
         window.localStorage.setItem(key, valueToStore);
       }
     } catch (error) {
-      console.error(`Error setting localStorage key "${key}":`, error);
     }
   };
 
@@ -92,7 +87,6 @@ export function useLocalStorageString(key: string, initialValue: string) {
         window.localStorage.removeItem(key);
       }
     } catch (error) {
-      console.error(`Error removing localStorage key "${key}":`, error);
     }
   };
 

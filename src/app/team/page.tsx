@@ -160,7 +160,6 @@ export default function TeamOverviewPage() {
       setIsEditModalOpen(false);
       setEditingMember(null);
     } catch (error) {
-      console.error('Failed to update team member:', error);
     }
   }, [editingMember, editFormData, updateMember]);
 
