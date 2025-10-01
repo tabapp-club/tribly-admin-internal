@@ -99,8 +99,8 @@ class PerformanceMonitor {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1];
         this.recordMetric('LCP', lastEntry.startTime, {
-          element: lastEntry.element?.tagName,
-          url: lastEntry.url,
+          element: (lastEntry as any).element?.tagName,
+          url: (lastEntry as any).url,
         });
       });
 

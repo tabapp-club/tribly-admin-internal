@@ -67,7 +67,8 @@ export default function SettingsPage() {
     twoFactorAuth: false,
     sessionTimeout: 30,
     passwordPolicy: 'strong',
-    ipWhitelist: false
+    ipWhitelist: false,
+    auditLogging: true
   });
 
   // Set client-side flag to prevent hydration mismatch
@@ -109,17 +110,17 @@ export default function SettingsPage() {
       try {
         const response = await authApi.getMe();
         if (response.data) {
-          const userData = response.data as any;
+          const userData = response.data as Record<string, unknown>;
 
           // Extract first and last name from the user data
-          const nameParts = userData.name?.split(' ') || ['', ''];
+          const nameParts = (typeof userData.name === 'string' ? userData.name.split(' ') : []) || ['', ''];
           const newProfileSettings = {
-            firstName: userData.first_name || nameParts[0] || '',
-            lastName: userData.last_name || nameParts.slice(1).join(' ') || '',
-            email: userData.email || '',
-            phone: userData.phone_number || userData.phone || '',
-            jobTitle: userData.job_title || '',
-            department: userData.department || '',
+            firstName: String(userData.first_name || nameParts[0] || ''),
+            lastName: String(userData.last_name || nameParts.slice(1).join(' ') || ''),
+            email: String(userData.email || ''),
+            phone: String(userData.phone_number || userData.phone || ''),
+            jobTitle: String(userData.job_title || ''),
+            department: String(userData.department || ''),
             password: '' // Always start with empty password
           };
 
@@ -144,7 +145,8 @@ export default function SettingsPage() {
         addNotification({
           title: 'Warning',
           message: 'Could not fetch latest profile data. Using cached data.',
-          type: 'warning'
+          type: 'warning',
+          isRead: false
         });
       } finally {
         setIsLoadingUserData(false);
@@ -219,20 +221,23 @@ export default function SettingsPage() {
         addNotification({
           title: 'Profile Updated',
           message: 'Your profile information has been updated successfully.',
-          type: 'success'
+          type: 'success',
+          isRead: false
         });
       } else {
         addNotification({
           title: 'Settings Saved',
           message: `${section} settings have been updated successfully.`,
-          type: 'success'
+          type: 'success',
+          isRead: false
         });
       }
     } catch {
       addNotification({
         title: 'Save Failed',
         message: 'Failed to save settings. Please try again.',
-        type: 'error'
+        type: 'error',
+        isRead: false
       });
     } finally {
       setIsLoading(false);
@@ -249,16 +254,16 @@ export default function SettingsPage() {
     try {
       const response = await authApi.getMe();
       if (response.data) {
-        const userData = response.data;
+        const userData = response.data as Record<string, unknown>;
 
-        const nameParts = userData.name?.split(' ') || ['', ''];
+        const nameParts = (typeof userData.name === 'string' ? userData.name.split(' ') : []) || ['', ''];
         const newProfileSettings = {
-          firstName: userData.first_name || nameParts[0] || '',
-          lastName: userData.last_name || nameParts.slice(1).join(' ') || '',
-          email: userData.email || '',
-          phone: userData.phone_number || userData.phone || '',
-          jobTitle: userData.job_title || '',
-          department: userData.department || '',
+          firstName: String(userData.first_name || nameParts[0] || ''),
+          lastName: String(userData.last_name || nameParts.slice(1).join(' ') || ''),
+          email: String(userData.email || ''),
+          phone: String(userData.phone_number || userData.phone || ''),
+          jobTitle: String(userData.job_title || ''),
+          department: String(userData.department || ''),
           password: ''
         };
 
@@ -267,14 +272,16 @@ export default function SettingsPage() {
         addNotification({
           title: 'Profile Refreshed',
           message: 'Profile data has been updated with latest information.',
-          type: 'success'
+          type: 'success',
+          isRead: false
         });
       }
     } catch {
       addNotification({
         title: 'Refresh Failed',
         message: 'Could not refresh profile data. Please try again.',
-        type: 'error'
+        type: 'error',
+        isRead: false
       });
     } finally {
       setIsLoadingUserData(false);

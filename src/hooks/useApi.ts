@@ -46,6 +46,7 @@ export function useApi<T = unknown>(options: ApiOptions = {}) {
           title: 'Success',
           message: finalOptions.successMessage,
           type: 'success',
+          isRead: false
         });
       }
 
@@ -64,6 +65,7 @@ export function useApi<T = unknown>(options: ApiOptions = {}) {
           title: 'Error',
           message: finalOptions.errorMessage || errorMessage,
           type: 'error',
+          isRead: false
         });
       }
 

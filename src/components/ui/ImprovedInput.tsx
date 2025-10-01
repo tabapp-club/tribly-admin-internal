@@ -36,6 +36,7 @@ const ImprovedInput = forwardRef<HTMLInputElement, ImprovedInputProps>(
     className,
     onBlur,
     onChange,
+    onFocus,
     ...props
   }, ref) => {
     const [internalError, setInternalError] = useState<string | null>(null);
@@ -82,7 +83,7 @@ const ImprovedInput = forwardRef<HTMLInputElement, ImprovedInputProps>(
     const handleFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
       setIsFocused(true);
       onFocus?.(e);
-    }, []);
+    }, [onFocus]);
 
     // Memoize the input classes to prevent unnecessary re-renders
     const inputClasses = useMemo(() => cn(

@@ -72,7 +72,7 @@ export default function TeamOverviewPage() {
     email: '',
     jobTitle: '',
     department: '',
-    role: '',
+    role: 'team' as 'master' | 'manager' | 'team',
     isActive: true
   });
 
@@ -173,7 +173,7 @@ export default function TeamOverviewPage() {
       email: '',
       jobTitle: '',
       department: '',
-      role: '',
+      role: 'team' as 'master' | 'manager' | 'team',
       isActive: true
     });
   };
@@ -199,85 +199,106 @@ export default function TeamOverviewPage() {
     {
       key: 'member',
       label: 'Team Member',
-      render: (value: unknown, row: TeamMember) => (
+      render: (value: unknown, row: Record<string, unknown>) => {
+        const member = row as unknown as TeamMember;
+        return (
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={row.avatar} />
+            <AvatarImage src={member.avatar} />
             <AvatarFallback className="bg-[#e9e9e9] text-[#2a2a2f]">
-              {getInitials(row.name)}
+              {getInitials(member.name)}
             </AvatarFallback>
           </Avatar>
           <div>
-            <div className="font-medium text-[#2a2a2f]">{row.name}</div>
-            <div className="text-sm text-gray-500">{row.jobTitle}</div>
+            <div className="font-medium text-[#2a2a2f]">{member.name}</div>
+            <div className="text-sm text-gray-500">{member.jobTitle}</div>
           </div>
         </div>
-      )
+        );
+      }
     },
     {
       key: 'role',
       label: 'Role',
-      render: (value: unknown, row: TeamMember) => (
-        <Badge className={getRoleColor(row.role)}>
-          {row.role.charAt(0).toUpperCase() + row.role.slice(1)}
+      render: (value: unknown, row: Record<string, unknown>) => {
+        const member = row as unknown as TeamMember;
+        return (
+        <Badge className={getRoleColor(member.role)}>
+          {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
         </Badge>
-      )
+        );
+      }
     },
     {
       key: 'department',
       label: 'Department',
-      render: (value: unknown, row: TeamMember) => (
-        <span className="text-sm text-gray-600">{row.department}</span>
-      )
+      render: (value: unknown, row: Record<string, unknown>) => {
+        const member = row as unknown as TeamMember;
+        return (
+        <span className="text-sm text-gray-600">{member.department}</span>
+        );
+      }
     },
     {
       key: 'performance',
       label: 'Performance',
-      render: (value: unknown, row: TeamMember) => (
+      render: (value: unknown, row: Record<string, unknown>) => {
+        const member = row as unknown as TeamMember;
+        return (
         <div className="text-sm">
-          <div className={`font-medium ${getPerformanceColor(row.performance.conversionRate)}`}>
-            {row.performance.conversionRate}%
+          <div className={`font-medium ${getPerformanceColor(member.performance.conversionRate)}`}>
+            {member.performance.conversionRate}%
           </div>
-          <div className="text-gray-500">{row.performance.businessesOnboarded} onboarded</div>
+          <div className="text-gray-500">{member.performance.businessesOnboarded} onboarded</div>
         </div>
-      )
+        );
+      }
     },
     {
       key: 'revenue',
       label: 'Revenue',
-      render: (value: unknown, row: TeamMember) => (
+      render: (value: unknown, row: Record<string, unknown>) => {
+        const member = row as unknown as TeamMember;
+        return (
         <div className="text-sm font-medium text-gray-900">
-          ${row.performance.totalRevenue.toLocaleString()}
+          ${member.performance.totalRevenue.toLocaleString()}
         </div>
-      )
+        );
+      }
     },
     {
       key: 'status',
       label: 'Status',
-      render: (value: unknown, row: TeamMember) => (
+      render: (value: unknown, row: Record<string, unknown>) => {
+        const member = row as unknown as TeamMember;
+        return (
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${row.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+          <div className={`w-2 h-2 rounded-full ${member.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
           <span className="text-sm text-gray-600">
-            {row.isActive ? 'Active' : 'Inactive'}
+            {member.isActive ? 'Active' : 'Inactive'}
           </span>
         </div>
-      )
+        );
+      }
     },
     {
       key: 'actions',
       label: 'Actions',
-      render: (value: unknown, row: TeamMember) => (
+      render: (value: unknown, row: Record<string, unknown>) => {
+        const member = row as unknown as TeamMember;
+        return (
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0"
-            onClick={() => handleEditMember(row)}
+            onClick={() => handleEditMember(member)}
           >
             <Edit className="h-4 w-4" />
           </Button>
         </div>
-      )
+        );
+      }
     }
   ];
 
@@ -641,7 +662,7 @@ export default function TeamOverviewPage() {
             <div className="hidden lg:block">
               <DataTable
                 columns={tableColumns}
-                data={filteredMembers}
+                data={filteredMembers as unknown as Record<string, unknown>[]}
               />
             </div>
           </CardContent>
@@ -718,7 +739,7 @@ export default function TeamOverviewPage() {
               </Label>
               <Select
                 value={editFormData.role}
-                onValueChange={(value) => setEditFormData(prev => ({ ...prev, role: value }))}
+                onValueChange={(value) => setEditFormData(prev => ({ ...prev, role: value as 'master' | 'manager' | 'team' }))}
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select role" />

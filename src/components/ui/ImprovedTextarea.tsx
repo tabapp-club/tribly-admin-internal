@@ -36,6 +36,7 @@ const ImprovedTextarea = forwardRef<HTMLTextAreaElement, ImprovedTextareaProps>(
     className,
     onBlur,
     onChange,
+    onFocus,
     maxLength,
     showCharCount = true,
     ...props
@@ -88,7 +89,7 @@ const ImprovedTextarea = forwardRef<HTMLTextAreaElement, ImprovedTextareaProps>(
     const handleFocus = useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
       setIsFocused(true);
       onFocus?.(e);
-    }, []);
+    }, [onFocus]);
 
     // Memoize the textarea classes to prevent unnecessary re-renders
     const textareaClasses = useMemo(() => cn(
